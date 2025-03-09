@@ -2,10 +2,10 @@
 #'
 #' @param url REDCap API url
 #' @param token REDCap API token
-#' @param content_type The data type you want to import, "record" (data) or "metadata" (data dictionary); defaults to both
+#' @param content_type The data type you want to import, "record" (data), "metadata" (data dictionary) or event (event description); defaults to all
 #' @param format The format in which the data and/or metadata are imported ("csv", "json" or "xml"); defaults to "csv"
 #'
-#' @returns The imported data and/or data dictionary
+#' @returns The imported data and/or selected metadata
 #' @export
 #'
 #' @examples REDCap_import(url = "https://your-redcap-api-url", token = "your_api_token")
@@ -94,5 +94,33 @@ REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
     results$metadata <- metadata  # Store the metadata in the list
   }
 
-  return(results)  # Return the list with both data and metadata
+  # ---- Import Event Data (event-form associations) if content_type is NULL or 'event' ----
+  if (is.null(content_type) || content_type == "event") {
+    cat("Importing event data (event description)...\n")
+    body <- list(
+      token = token,
+      content = "event",  # Request event names and form associations
+      format = format,
+      returnFormat = "json"  # Return in JSON format
+    )
+
+    response <- POST(url, body = body, encode = "form")
+
+    # Check for API Errors
+    if (http_status(response)$category != "Success") {
+      stop("API request failed: ", http_status(response)$message)
+    }
+
+    # Process event data response
+    if (format == "csv") {
+      event_data <- read.csv(text = content(response, "text"), stringsAsFactors = FALSE)
+    } else if (format == "json") {
+      event_data <- fromJSON(content(response, "text"))
+    }
+
+    results$event_data <- event_data  # Store the event data in the list
+  }
+
+  return(results)  # Return the list with data, metadata, and event data
 }
+
