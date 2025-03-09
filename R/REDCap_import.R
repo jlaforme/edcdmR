@@ -40,8 +40,20 @@ REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
   # ---- Prepare the list to store the results ----
   results <- list()
 
-  # ---- Import Data (Records) if content_type is NULL or 'record' ----
-  if (is.null(content_type) || content_type == "record") {
+  # ---- Content Type Validation ----
+  if (is.null(content_type)) {
+    content_type <- c("record", "metadata", "event")  # Default to all content types if empty
+  }
+
+  valid_content_types <- c("record", "metadata", "event")
+
+  # Ensure all content types are valid
+  if (!all(content_type %in% valid_content_types)) {
+    stop("Error: content_type must include only 'record', 'metadata', or 'event'.")
+  }
+
+  # ---- Import Data (Records) if content_type includes 'record' ----
+  if ("record" %in% content_type) {
     cat("Importing records (data)...\n")
     body <- list(
       token = token,
@@ -67,8 +79,8 @@ REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
     results$data <- data  # Store the data in the list
   }
 
-  # ---- Import Metadata if content_type is NULL or 'metadata' ----
-  if (is.null(content_type) || content_type == "metadata") {
+  # ---- Import Metadata if content_type includes 'metadata' ----
+  if ("metadata" %in% content_type) {
     cat("Importing metadata (data dictionary)...\n")
     body <- list(
       token = token,
@@ -94,8 +106,8 @@ REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
     results$metadata <- metadata  # Store the metadata in the list
   }
 
-  # ---- Import Event Data (event-form associations) if content_type is NULL or 'event' ----
-  if (is.null(content_type) || content_type == "event") {
+  # ---- Import Event Data (event-form associations) if content_type includes 'event' ----
+  if ("event" %in% content_type) {
     cat("Importing event data (event description)...\n")
     body <- list(
       token = token,
@@ -121,6 +133,11 @@ REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
     results$event_data <- event_data  # Store the event data in the list
   }
 
+  # ---- Return a single data frame if only one content_type is specified ----
+  if (length(results) == 1) {
+    return(results[[1]])  # Return the single data frame
+  }
+
+  # ---- Otherwise return the list of results ----
   return(results)  # Return the list with data, metadata, and event data
 }
-
