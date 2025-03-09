@@ -1,0 +1,14 @@
+Package: edcdmR
+Title: Manage electronic data capture (EDC) system data.
+Version: 0.0.0.9000
+Authors@R: 
+    person("Jerome", "Laforme", , "jerome_4488@outlook.com", role = c("aut", "cre"))
+Description: This package is intended to manage electronic data capture (EDC) system data.
+License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
+    license
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports: 
+    dplyr,
+    lubridate
