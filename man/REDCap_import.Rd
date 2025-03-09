@@ -2,7 +2,7 @@
 % Please edit documentation in R/REDCap_import.R
 \name{REDCap_import}
 \alias{REDCap_import}
-\title{Title}
+\title{Import REDCap data and metadata}
 \usage{
 REDCap_import(url, token, content_type = NULL, format = "csv")
 }
@@ -11,15 +11,15 @@ REDCap_import(url, token, content_type = NULL, format = "csv")
 
 \item{token}{REDCap API token}
 
-\item{content_type}{The data type you want to import, "record" (data) or "metadata" (data dictionary); defaults to both}
+\item{content_type}{The data type you want to import, "record" (data), "metadata" (data dictionary), event (event description) or mapping (instrument-event mapping); defaults to all}
 
 \item{format}{The format in which the data and/or metadata are imported ("csv", "json" or "xml"); defaults to "csv"}
 }
 \value{
-The imported data and/or data dictionary
+The imported data and/or selected metadata
 }
 \description{
-Title
+Import REDCap data and metadata
 }
 \examples{
 REDCap_import(url = "https://your-redcap-api-url", token = "your_api_token")

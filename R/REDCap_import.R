@@ -1,8 +1,8 @@
-#' Title
+#' Import REDCap data and metadata
 #'
 #' @param url REDCap API url
 #' @param token REDCap API token
-#' @param content_type The data type you want to import, "record" (data), "metadata" (data dictionary) or event (event description); defaults to all
+#' @param content_type The data type you want to import, "record" (data), "metadata" (data dictionary), event (event description) or mapping (instrument-event mapping); defaults to all
 #' @param format The format in which the data and/or metadata are imported ("csv", "json" or "xml"); defaults to "csv"
 #'
 #' @returns The imported data and/or selected metadata
@@ -42,10 +42,10 @@ REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
 
   # ---- Content Type Validation ----
   if (is.null(content_type)) {
-    content_type <- c("record", "metadata", "event")  # Default to all content types if empty
+    content_type <- c("record", "metadata", "event", "mapping")  # Default to all content types if empty
   }
 
-  valid_content_types <- c("record", "metadata", "event")
+  valid_content_types <- c("record", "metadata", "event", "mapping")
 
   # Ensure all content types are valid
   if (!all(content_type %in% valid_content_types)) {
@@ -106,7 +106,7 @@ REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
     results$metadata <- metadata  # Store the metadata in the list
   }
 
-  # ---- Import Event Data (event-form associations) if content_type includes 'event' ----
+  # ---- Import Event Data (event description) if content_type includes 'event' ----
   if ("event" %in% content_type) {
     cat("Importing event data (event description)...\n")
     body <- list(
@@ -132,6 +132,34 @@ REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
 
     results$event_data <- event_data  # Store the event data in the list
   }
+
+  # ---- Import Mapping Data (event-form associations/mapping) if content_type includes 'mapping' ----
+  if ("mapping" %in% content_type) {
+    cat("Importing mapping data (event form mapping)...\n")
+    body <- list(
+      token = token,
+      content = "formEventMapping",  # Request event names and form associations
+      format = format,
+      returnFormat = "json"  # Return in JSON format
+    )
+
+    response <- POST(url, body = body, encode = "form")
+
+    # Check for API Errors
+    if (http_status(response)$category != "Success") {
+      stop("API request failed: ", http_status(response)$message)
+    }
+
+    # Process event data response
+    if (format == "csv") {
+      mapping_data <- read.csv(text = content(response, "text"), stringsAsFactors = FALSE)
+    } else if (format == "json") {
+      mapping_data <- fromJSON(content(response, "text"))
+    }
+
+    results$mapping_data <- mapping_data  # Store the event data in the list
+  }
+
 
   # ---- Return a single data frame if only one content_type is specified ----
   if (length(results) == 1) {
