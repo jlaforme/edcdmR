@@ -2,7 +2,7 @@
 #'
 #' @param data_dictionary REDCap data dictionary
 #' @param column_name Name of the column containing containing the REDCap logic in the data dictionary
-#' @param missing_data_codes Codes used to specify missing data; defaults to c(-777, -888, -999, -7777, -8888, -9999, NA)
+#' @param missing_data_codes Codes used to specify missing data; defaults to c("NA", "na")
 #'
 #' @returns
 #' @export
@@ -31,12 +31,6 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
     }
     return(expr)
   }
-  add_quotes_if_no_brackets <- function(string) {
-    if (!grepl("\\[.*\\]", string)) {  # Check if string doesn't contain square brackets
-      string <- paste0("'", string, "'")  # Add double quotes at the beginning and end
-    }
-    return(string)
-  }
   add_quotes_if_no_brackets <- function(strings) {
     sapply(strings, function(string) {
       if (!grepl("\\[.*\\]", string)) {
@@ -46,7 +40,6 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
       }
     })
   }
-
 
   # Checks
   if (!column_name %in% names(data_dictionary)) {
