@@ -12,8 +12,7 @@
 #' @examples REDCap_import(url = "https://your-redcap-api-url", token = "your_api_token", content_type = "record", format = "json")
 
 REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
-  library(httr)
-  library(jsonlite)
+
 
   # ---- Token Validation ----
   if (missing(token) || !is.character(token)) {
