@@ -3,3 +3,4 @@
 export(REDCap_filter)
 export(REDCap_import)
 export(REDCap_logic_parser)
+export(REDCap_map_labels)

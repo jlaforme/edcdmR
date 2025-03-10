@@ -1,4 +1,15 @@
-REDCap_labels_conversion <- function(data, data_dictionary, variables = "All") {
+#' Allows to map caterogical values of a REDCap dataset to their respective data dictionary labels. Only applicable to radio and dropdown variables.
+#'
+#' @param data The REDCap data to map
+#' @param data_dictionary The REDCap data dictionary
+#' @param variables Variable(s) to map; defaults to all
+#'
+#' @returns A dataset with mapped values
+#' @export
+#'
+#' @examples
+
+REDCap_map_labels <- function(data, data_dictionary, variables = "All") {
 
   # Clean the dd
   data_dictionary <- data_dictionary %>%

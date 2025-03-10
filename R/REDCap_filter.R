@@ -14,7 +14,7 @@
 
 REDCap_filter <- function(data, data_dictionary, id_variable, forms = NULL, variables = NULL) {
 
-  # Clean data
+    # Clean data
   # Data dictionnary
   data_dictionary <- data_dictionary %>%
     mutate(across(where(is.character), ~ na_if(., ""))) %>%
