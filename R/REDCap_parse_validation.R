@@ -1,4 +1,4 @@
-REDCap_condition_validation <- function(data, data_dictionary, column_name) {
+REDCap_parse_validation <- function(data, data_dictionary, column_name) {
   # Function to validate each branching logic expression
   # Apply the validation to each cell in the branching logic column
   validate_logic <- function(cell, row_index) {

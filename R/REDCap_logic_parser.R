@@ -1,5 +1,7 @@
 #' Translate REDCap logic to R
 #'
+#' @description This function translate REDCap logic, conditions and calculations to useable R codes.
+#'
 #' @param data_dictionary REDCap data dictionary
 #' @param column_name Name of the column containing containing the REDCap logic in the data dictionary
 #' @param missing_data_codes Codes used to specify missing data; defaults to c("NA", "na")
@@ -224,7 +226,7 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
 
       # Handle `mod()` (modulo)
-      if (str_detect(cell, "mod(")) {
+      if (str_detect(cell, "mod\\(")) {
         match <- str_match(cell, "mod\\(([^,]+),\\s*([^\\)]+)\\)")
 
 
@@ -243,31 +245,31 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
 
       # Handle `stdev()`
-      if (str_detect(cell, "stdev(")) {
+      if (str_detect(cell, "stdev\\(")) {
        cell <- gsub("stdv", "sd", cell)
       }
 
 
       # Handle `isnumber()`
-      if (str_detect(cell, "isnumber(")) {
+      if (str_detect(cell, "isnumber\\(")) {
         cell <- gsub("isnumber", "is.numeric", cell)
       }
 
 
       # Handle `isinteger()`
-      if (str_detect(cell, "isinteger(")) {
+      if (str_detect(cell, "isinteger\\(")) {
         cell <- gsub("isinteger", "is.integer", cell)
       }
 
 
       # Handle `length()`
-      if (str_detect(cell, "length(")) {
+      if (str_detect(cell, "length\\(")) {
         cell <- gsub("length ", "nchar", cell)
       }
 
 
       # Handle `contains()`
-      if (str_detect(cell, "contains(")) {
+      if (str_detect(cell, "contains\\(")) {
         match <- str_match(cell, "contains\\(([^,]+),\\s*([^\\)]+)\\)")
 
         if (!is.na(match[1])) {
@@ -288,7 +290,7 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
 
       # Handle `not_contain()`
-      if (str_detect(cell, "not_contain(")) {
+      if (str_detect(cell, "not_contain\\(")) {
         match <- str_match(cell, "not_contain\\(([^,]+),\\s*([^\\)]+)\\)")
 
         if (!is.na(match[1])) {
@@ -309,7 +311,7 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
 
       # Handle `not_contain()`
-      if (str_detect(cell, "not_contain(")) {
+      if (str_detect(cell, "not_contain\\(")) {
         match <- str_match(cell, "not_contain\\(([^,]+),\\s*([^\\)]+)\\)")
 
         if (!is.na(match[1])) {
@@ -331,7 +333,7 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
 
       # Handle `starts_with()`
-      if (str_detect(cell, "starts_with(")) {
+      if (str_detect(cell, "starts_with\\(")) {
         match <- str_match(cell, "starts_with\\(([^,]+),\\s*([^\\)]+)\\)")
 
         if (!is.na(match[1])) {
@@ -352,7 +354,7 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
 
       # Handle `ends_with()`
-      if (str_detect(cell, "ends_with(")) {
+      if (str_detect(cell, "ends_with\\(")) {
         match <- str_match(cell, "ends_with\\(([^,]+),\\s*([^\\)]+)\\)")
 
         if (!is.na(match[1])) {
@@ -373,7 +375,7 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
 
       # Handle `left()`
-      if (str_detect(cell, "left(")) {
+      if (str_detect(cell, "left\\(")) {
         match <- str_match(cell, "left\\(([^,]+),\\s*([^\\)]+)\\)")
 
         if (!is.na(match[1])) {
@@ -393,7 +395,7 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
 
       # Handle `right()`
-      if (str_detect(cell, "right(")) {
+      if (str_detect(cell, "right\\(")) {
         match <- str_match(cell, "right\\(([^,]+),\\s*([^\\)]+)\\)")
 
         if (!is.na(match[1])) {
@@ -413,7 +415,7 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
 
       # Handle `find()`
-      if (str_detect(cell, "find(")) {
+      if (str_detect(cell, "find\\(")) {
         match <- str_match(cell, "find\\(([^,]+),\\s*([^\\)]+)\\)")
 
         if (!is.na(match[1])) {
@@ -434,7 +436,7 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
 
       # Handle `replace_text()`
-      if (str_detect(cell, "replace_text(")) {
+      if (str_detect(cell, "replace_text\\(")) {
         match <- str_match(cell, "replace_text\\(([^,]+),\\s*([^,]+),\\s*([^\\)]+)\\)")
 
         if (!is.na(match[1])) {
@@ -458,7 +460,7 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
 
       # Handle `mid()`
-      if (str_detect(cell, "mid(")) {
+      if (str_detect(cell, "mid\\(")) {
         match <- str_match(cell, "mid\\(([^,]+),\\s*([^,]+),\\s*([^\\)]+)\\)")
 
         if (!is.na(match[1])) {
@@ -480,13 +482,13 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
 
       # Handle `concat()`
-      if (str_detect(cell, "concat(")) {
+      if (str_detect(cell, "concat\\(")) {
         cell <- gsub("concat ", "paste0", cell)
       }
 
 
       # Handle `concat_ws()`
-      if (str_detect(cell, "concat_ws(")) {
+      if (str_detect(cell, "concat_ws\\(")) {
         separator <- str_match(cell, 'concat_ws\\(["\'](.*?)["\']')[,2]
         elements <- str_match_all(cell, '["\'](.*?)["\']')[[1]][,2]
         elements <- elements[-1]
@@ -501,19 +503,19 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
 
       # Handle `upper()`
-      if (str_detect(cell, "upper(")) {
+      if (str_detect(cell, "upper\\(")) {
         cell <- gsub("upper ", "toupper", cell)
       }
 
 
       # Handle `lower()`
-      if (str_detect(cell, "lower(")) {
+      if (str_detect(cell, "lower\\(")) {
         cell <- gsub("lower ", "tolower", cell)
       }
 
 
       # Handle `trim()`
-      if (str_detect(cell, "trim(")) {
+      if (str_detect(cell, "trim\\(")) {
         cell <- gsub("trim ", "trimws", cell)
       }
 

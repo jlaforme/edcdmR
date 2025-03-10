@@ -1,4 +1,6 @@
-#' Allows to map caterogical values of a REDCap dataset to their respective data dictionary labels. Only applicable to radio and dropdown variables.
+#' Map metadata labels to data values
+#'
+#'@description Allows to map caterogical values of a REDCap dataset to their respective data dictionary labels. Only applicable to radio and dropdown variables.
 #'
 #' @param data The REDCap data to map
 #' @param data_dictionary The REDCap data dictionary

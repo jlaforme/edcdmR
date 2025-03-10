@@ -1,5 +1,7 @@
 #' Filter REDCap dataset
 #'
+#' @description Reruens a filtered dataset based on forms and variables arguments.
+#'
 #' @param data Dataset to filter
 #' @param data_dictionary Data dictionary
 #' @param id_variable Name of the identifier variable
@@ -13,8 +15,10 @@
 #' @examples REDCap_filter(data = REDCap_data, data_dictionary = REDCap_dd, id_variable = "record_id", forms = c("form1", "form2", "..."), variables = c("var1", "var2", "..."))
 
 REDCap_filter <- function(data, data_dictionary, id_variable, forms = NULL, variables = NULL) {
+  library(dplyr)
+  library(xml2)
 
-    # Clean data
+  # Clean data
   # Data dictionnary
   data_dictionary <- data_dictionary %>%
     mutate(across(where(is.character), ~ na_if(., ""))) %>%
@@ -32,24 +36,7 @@ REDCap_filter <- function(data, data_dictionary, id_variable, forms = NULL, vari
 
     group_by(form_name) %>%
     fill(section_header, .direction = "down") %>%
-    ungroup() %>%
-
-    mutate(
-      section_header = ifelse(
-        !is.na(section_header) & grepl("<.*?>", section_header),
-        sapply(section_header, function(x) {
-          tryCatch(xml_text(read_html(x)), error = function(e) NA)
-        }),
-        section_header
-      ),
-      field_label = ifelse(
-        !is.na(field_label) & grepl("<.*?>", field_label),
-        sapply(field_label, function(x) {
-          tryCatch(xml_text(read_html(x)), error = function(e) NA)
-        }),
-        field_label
-      )
-    )
+    ungroup()
 
   metadata_columns <- names(data)[!sapply(names(data), function(x) {
     base_var <- strsplit(x, "___")[[1]][1]

@@ -13,5 +13,5 @@ Imports:
     dplyr (>= 1.0),
     httr (>= 1.4.0),
     lubridate,
-    jsonlite
-    
+    jsonlite,
+    xml2
