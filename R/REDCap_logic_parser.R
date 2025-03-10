@@ -14,6 +14,9 @@
 
 REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes = NULL) {
 
+  library(dplyr)
+  library(stringr)
+
   # Default missing data codes
   default_missing_data_codes <- c("NA", "na")
 
@@ -123,7 +126,7 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
         }
       }
 
-      cell <- "datediff([dob], [today], 'Y', 'mdy', true) > 18"
+
       # Handle `datediff` logic transformation
       if (str_detect(cell, "datediff")) {
         match <- str_match(cell, "datediff\\(([^,]+),\\s*([^,]+),\\s*([^,]+)(?:,\\s*(.*))?\\)")
