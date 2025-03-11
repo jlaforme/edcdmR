@@ -47,14 +47,14 @@ REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
 
   # ---- Content Type Validation ----
   if (is.null(content_type)) {
-    content_type <- c("record", "metadata", "event", "mapping")  # Default to all content types if empty
+    content_type <- c("record", "dictionary", "event", "mapping")  # Default to all content types if empty
   }
 
-  valid_content_types <- c("record", "metadata", "event", "mapping")
+  valid_content_types <- c("record", "dictionary", "event", "mapping")
 
   # Ensure all content types are valid
   if (!all(content_type %in% valid_content_types)) {
-    stop("Error: content_type must include only 'record', 'metadata', or 'event'.")
+    stop("Error: content_type must include only 'record', 'dictionary', 'event' or 'mapping'.")
   }
 
   # ---- Import Data (Records) if content_type includes 'record' ----
@@ -84,12 +84,12 @@ REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
     results$data <- data  # Store the data in the list
   }
 
-  # ---- Import Metadata if content_type includes 'metadata' ----
-  if ("metadata" %in% content_type) {
-    cat("Importing metadata (data dictionary)...\n")
+  # ---- Import dictionary if content_type includes 'dictionary' ----
+  if ("dictionary" %in% content_type) {
+    cat("Importing dictionary (data dictionary)...\n")
     body <- list(
       token = token,
-      content = "metadata",  # Request metadata (data dictionary)
+      content = "metadata",  # Request dictionary (data dictionary)
       format = format,
       returnFormat = "json"  # Return in JSON format
     )
@@ -101,14 +101,14 @@ REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
       stop("API request failed: ", http_status(response)$message)
     }
 
-    # Process metadata response
+    # Process dictionary response
     if (format == "csv") {
-      metadata <- read.csv(text = content(response, "text"), stringsAsFactors = FALSE)
+      dictionary <- read.csv(text = content(response, "text"), stringsAsFactors = FALSE)
     } else if (format == "json") {
-      metadata <- fromJSON(content(response, "text"))
+      dictionary <- fromJSON(content(response, "text"))
     }
 
-    results$metadata <- metadata  # Store the metadata in the list
+    results$dictionary <- dictionary  # Store the dictionary in the list
   }
 
   # ---- Import Event Data (event description) if content_type includes 'event' ----
