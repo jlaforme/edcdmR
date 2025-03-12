@@ -113,7 +113,7 @@ REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
 
   # ---- Import Event Data (event description) if content_type includes 'event' ----
   if ("event" %in% content_type) {
-    cat("Importing event data (event description)...\n")
+    cat("Importing event_description data (event description)...\n")
     body <- list(
       token = token,
       content = "event",  # Request event names and form associations
@@ -130,17 +130,17 @@ REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
 
     # Process event data response
     if (format == "csv") {
-      event_data <- read.csv(text = content(response, "text"), stringsAsFactors = FALSE)
+      event_description <- read.csv(text = content(response, "text"), stringsAsFactors = FALSE)
     } else if (format == "json") {
-      event_data <- fromJSON(content(response, "text"))
+      event_description <- fromJSON(content(response, "text"))
     }
 
-    results$event_data <- event_data  # Store the event data in the list
+    results$event_description <- event_description  # Store the event data in the list
   }
 
   # ---- Import Mapping Data (event-form associations/mapping) if content_type includes 'mapping' ----
   if ("mapping" %in% content_type) {
-    cat("Importing mapping data (event form mapping)...\n")
+    cat("Importing event_form data (event form mapping)...\n")
     body <- list(
       token = token,
       content = "formEventMapping",  # Request event names and form associations
@@ -157,14 +157,15 @@ REDCap_import <- function(url, token, content_type = NULL, format = "csv") {
 
     # Process event data response
     if (format == "csv") {
-      mapping_data <- read.csv(text = content(response, "text"), stringsAsFactors = FALSE)
+      event_form <- read.csv(text = content(response, "text"), stringsAsFactors = FALSE)
     } else if (format == "json") {
-      mapping_data <- fromJSON(content(response, "text"))
+      event_form <- fromJSON(content(response, "text"))
     }
 
-    results$mapping_data <- mapping_data  # Store the event data in the list
+    results$event_form <- event_form  # Store the event data in the list
   }
 
+  cat("Import done.")
 
   # ---- Return a single data frame if only one content_type is specified ----
   if (length(results) == 1) {
