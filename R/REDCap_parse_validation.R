@@ -1,4 +1,17 @@
-REDCap_parse_validation <- function(data, data_dictionary, column_name) {
+#' Validate REDcap to R translation
+#'
+#' @description This function allows you to validate the output of REDCap_logic_parser in the context of you REDCap data
+#'
+#' @param data REDCap data on which you want to validate the parsing
+#' @param logic Dataset or string containing the R logic
+#' @param column_name Name of the column containing the logic if "logic" is a dataset, else, leave blank
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+
+REDCap_parse_validation <- function(data, logic, column_name) {
   # Function to validate each branching logic expression
   # Apply the validation to each cell in the branching logic column
   validate_logic <- function(cell, row_index) {
@@ -23,12 +36,12 @@ REDCap_parse_validation <- function(data, data_dictionary, column_name) {
         if (is.logical(eval_result)) {
           all(eval_result, na.rm = TRUE)  # Ensure the result is logical and NA values are removed
         } else {
-          message("Invalid logical expression in row ", row_index)
+          message("Invalid logic expression in row ", row_index)
           FALSE
         }
 
       }, error = function(e) {
-        message("Error in branching logic (row ", row_index, "): ", cell, " - ", e$message)
+        message("Error in logic (row ", row_index, "): ", cell, " - ", e$message)
         FALSE  # If an error occurs, return FALSE
       })
 
@@ -38,8 +51,8 @@ REDCap_parse_validation <- function(data, data_dictionary, column_name) {
   }
 
   # Iterate over the rows in the data and apply the validation
-  validation_results <- sapply(1:nrow(data_dictionary), function(i) {
-    validate_logic(data_dictionary[[column_name]][i], i)
+  validation_results <- sapply(1:nrow(logic), function(i) {
+    validate_logic(logic[[column_name]][i], i)
   })
 
   return(validation_results)

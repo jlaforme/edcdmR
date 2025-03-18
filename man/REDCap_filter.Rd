@@ -27,7 +27,7 @@ REDCap_filter(
 A filtered dataframe
 }
 \description{
-Filter REDCap dataset
+Reruens a filtered dataset based on forms and variables arguments.
 }
 \examples{
 REDCap_filter(data = REDCap_data, data_dictionary = REDCap_dd, id_variable = "record_id")

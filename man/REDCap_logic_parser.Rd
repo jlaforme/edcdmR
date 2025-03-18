@@ -4,22 +4,29 @@
 \alias{REDCap_logic_parser}
 \title{Translate REDCap logic to R}
 \usage{
-REDCap_logic_parser(data_dictionary, column_name, missing_data_codes = NULL)
+REDCap_logic_parser(
+  logic,
+  column_name = NULL,
+  missing_data_codes = NULL,
+  loop = 0
+)
 }
 \arguments{
-\item{data_dictionary}{REDCap data dictionary}
+\item{logic}{REDCap data dictionary}
 
 \item{column_name}{Name of the column containing containing the REDCap logic in the data dictionary}
 
 \item{missing_data_codes}{Codes used to specify missing data; defaults to c("NA", "na")}
+
+\item{loop}{Indicates wether you want to use the logic in a loop in the future (adds \link{i} after each variable calling and encapsulate each logic in unique(na.omit())); defaults to 0}
 }
 \value{
 A dataframe with "column_name" parsed
 }
 \description{
-Translate REDCap logic to R
+This function translate REDCap logic, conditions and calculations to useable R codes.
 }
 \examples{
-REDCap_logic_parser(data_dictionary = REDCap_data_dictionary, column_name = "branching_logic")
-REDCap_logic_parser(data_dictionary = dd_export, column_name = "branching logic", missing_data_codes = c("-9999", "-999"))
+REDCap_logic_parser(logic = REDCap_logic, column_name = "branching_logic")
+REDCap_logic_parser(logic = dd_export, column_name = "branching logic", missing_data_codes = c("-9999", "-999"))
 }

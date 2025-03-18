@@ -19,7 +19,7 @@ REDCap_import(url, token, content_type = NULL, format = "csv")
 The imported data and/or selected metadata
 }
 \description{
-Import REDCap data and metadata
+Allow users to import REDCap data and metadata with an API.
 }
 \examples{
 REDCap_import(url = "https://your-redcap-api-url", token = "your_api_token")

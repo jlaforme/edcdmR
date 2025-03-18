@@ -2,20 +2,36 @@
 #'
 #' @description This function translate REDCap logic, conditions and calculations to useable R codes.
 #'
-#' @param data_dictionary REDCap data dictionary
+#' @param logic REDCap data dictionary
 #' @param column_name Name of the column containing containing the REDCap logic in the data dictionary
 #' @param missing_data_codes Codes used to specify missing data; defaults to c("NA", "na")
+#' @param loop Indicates wether you want to use the logic in a loop in the future (adds [i] after each variable calling and encapsulate each logic in unique(na.omit())); defaults to 0
 #'
 #' @returns A dataframe with "column_name" parsed
 #' @export
 #'
-#' @examples REDCap_logic_parser(data_dictionary = REDCap_data_dictionary, column_name = "branching_logic")
-#' @examples REDCap_logic_parser(data_dictionary = dd_export, column_name = "branching logic", missing_data_codes = c("-9999", "-999"))
+#' @examples REDCap_logic_parser(logic = REDCap_logic, column_name = "branching_logic")
+#' @examples REDCap_logic_parser(logic = dd_export, column_name = "branching logic", missing_data_codes = c("-9999", "-999"))
 
-REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes = NULL) {
+REDCap_logic_parser <- function(logic, column_name = NULL, missing_data_codes = NULL, loop = TRUE) {
 
   library(dplyr)
   library(stringr)
+  library(lubridate)
+
+  # Checks
+  if (is.data.frame(logic) && is.null(column_name)) {
+    stop("A data frame was provided for 'logic', but no 'column_name' was specified. Please provide the name of the column containing the logic(s).")
+  }
+
+  if (is.data.frame(logic) && !(column_name %in% names(logic))) {
+    stop(paste0("column_name ", "'", column_name, "'", " is not present in your logic"))
+  }
+
+  if (is.vector(logic) || is.character(logic)) {
+    logic <- as.data.frame(logic)
+    column_name <- "logic"
+  }
 
   # Default missing data codes
   default_missing_data_codes <- c("NA", "na")
@@ -46,16 +62,9 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
     })
   }
 
-  # Checks
-  if (!column_name %in% names(data_dictionary)) {
-    stop(paste0("column_name ", "'", column_name, "'", " is not present in your data_dictionary"))
-  }
-  if (!is.data.frame(data_dictionary)) {
-    stop("The provided data_dictionary is not a data frame")
-  }
 
-  # Clean the data_dictionary
-  data_dictionary <- data_dictionary %>%
+  # Clean the logic if not null
+  logic <- logic %>%
     mutate(across(all_of(column_name), ~ ifelse(. == "", NA, .)))
 
 
@@ -129,14 +138,17 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
       # Handle `datediff` logic transformation
       if (str_detect(cell, "datediff")) {
-        match <- str_match(cell, "datediff\\(([^,]+),\\s*([^,]+),\\s*([^,]+)(?:,\\s*(.*))?\\)")
+        match <- str_match(cell, "datediff\\(([^,]+),\\s*([^,]+),\\s*'([^']+)'(?:,\\s*'([^']+)')?(?:,\\s*(true|false))?\\)")
 
 
         if (!is.na(match[1])) {
           first_var <- match[2]
           second_var <- match[3]
           unit <- match[4]
-          returnSignedValue <- match[5]
+          returnSignedValue <- match[6]
+          if (is.na(returnSignedValue)) {
+            returnSignedValue = "false"
+          }
 
           first_var <- remove_last_parenthesis(first_var)
           second_var <- remove_last_parenthesis(second_var)
@@ -162,7 +174,7 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
                                                                ifelse(unit == "m", "minutes(1)", "seconds(1)"))))), ")"),
 
                                  paste0(
-                                   "interval(", "[",
+                                   "interval(",
                                    ifelse(first_var == "'today'", "Sys.Date()", first_var),
                                    ", ",
                                    ifelse(second_var == "'today'", "Sys.Date()", second_var),
@@ -200,31 +212,44 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
 
       # Handle `roundup`
-      if (str_detect(cell, "roundup")) {
-        message("A 'roundup' function was detected in your REDCap logic(s), there is no built in 'roundup' function in R. Before using the resulting logic(s), please load the following function in your environment:
-        roundup <- function(x, digits = 0) {
-          multiplier <- 10^digits
-          ceiling(x * multiplier) / multiplier
-        }")
-        roundup <- function(x, digits = 0) {
-          multiplier <- 10^digits
-          ceiling(x * multiplier) / multiplier
+      if (str_detect(cell, "roundup\\(")) {
+        match <- str_match(cell, "roundup\\(([^,]*),?\\s*([^\\)]*)\\)")
+
+        if (!is.na(match[1])) {
+          number <- match[2]
+          decimal_place <- match[3]
+          if(decimal_place == ""){
+            decimal_place = "0"
+          }
+
+          number <- remove_last_parenthesis(number)
+          decimal_place <- remove_last_parenthesis(decimal_place)
+
+          r_equivalent <- paste0("(ceiling(", number, "*10^", decimal_place, ") / 10^", decimal_place, ")")
+
+          cell <- str_replace(cell, "roundup\\(.*?\\)", r_equivalent)
         }
       }
 
 
       # Handle `rounddown`
-      if (str_detect(cell, "roundup")) {
-        message("A 'rounddown' function was detected in your REDCap logic(s), there is no built in 'rounddown' function in R. Before using the resulting logic(s), please load the following function in your environment:
-        rounddown <- function(x, digits = 0) {
-          multiplier <- 10^digits
-          floor(x * multiplier) / multiplier
-        }")
-        rounddown <- function(x, digits = 0) {
-          multiplier <- 10^digits
-          floor(x * multiplier) / multiplier
-        }
+      if (str_detect(cell, "rounddown\\(")) {
+        match <- str_match(cell, "rounddown\\(([^,]*),?\\s*([^\\)]*)\\)")
 
+        if (!is.na(match[1])) {
+          number <- match[2]
+          decimal_place <- match[3]
+          if(decimal_place == ""){
+            decimal_place = "0"
+          }
+
+          number <- remove_last_parenthesis(number)
+          decimal_place <- remove_last_parenthesis(decimal_place)
+
+          r_equivalent <- paste0("(floor(", number, "*10^", decimal_place, ") / 10^", decimal_place, ")")
+
+          cell <- str_replace(cell, "rounddown\\(.*?\\)", r_equivalent)
+        }
       }
 
 
@@ -525,75 +550,91 @@ REDCap_logic_parser <- function(data_dictionary, column_name, missing_data_codes
 
       # General transformations for branching logic
       if (str_detect(cell, "\\]\\[")) {
+        # Extract events and variables referenced with event designations
         events <- str_extract_all(cell, "(?<=\\[)[^\\]\\[]*(?=\\]\\[)")
         called_vars <- str_extract_all(cell, "(?<=\\]\\[).*?(?=\\])")
 
-        cell <- str_replace_all(cell, "\\]\\[", "\\^")
+        # Replace event-variable separator
+        cell <- str_replace_all(cell, "\\]\\[", "\\^^^")
 
-        for (i in seq_along(events[[1]])) {
-          event <- events[[1]][i]
+        # Replace event references
+        for (event in events[[1]]) {
           cell <- str_replace_all(cell, paste0("\\[", event), event)
         }
 
-        for (i in seq_along(called_vars[[1]])) {
-          called_var <- called_vars[[1]][i]
-          cell <- str_replace_all(cell, paste0("\\[", called_var, "\\]"), paste0("\\[", called_var, "`"))
+        # Replace variable references within events
+        for (called_var in called_vars[[1]]) {
+          cell <- str_replace_all(cell, paste0("\\[", called_var, "\\]"), paste0("\\[", called_var, "`]"))
           cell <- str_replace_all(cell, paste0(called_var, "\\]"), called_var)
         }
 
-        cell <- str_replace_all(cell, "\\[", "data$`")
-        cell <- str_replace_all(cell, "\\]", "`[i]")
-        cell <- str_replace_all(cell, "\\bor\\b|\\bOR\\b", "|")
-        cell <- str_replace_all(cell, "\\band\\b|\\bAND\\b", "&")
-        cell <- str_replace_all(cell, "=", "==")
-        cell <- str_replace_all(cell, ">==", ">=")
-        cell <- str_replace_all(cell, "<==", "<=")
-        cell <- str_replace_all(cell, "<>", "!=")
+        # Convert REDCap syntax to R syntax
+        cell <- cell %>%
+          str_replace_all("\\[", "data$`") %>%
+          str_replace_all("\\]", "`[i]") %>%
+          str_replace_all("\\bor\\b|\\bOR\\b", "|") %>%
+          str_replace_all("\\band\\b|\\bAND\\b", "&") %>%
+          str_replace_all("=", "==") %>%
+          str_replace_all(">==", ">=") %>%
+          str_replace_all("<==", "<=") %>%
+          str_replace_all("<>", "!=") %>%
+          str_replace_all("``", "`")
 
+        # Replace event-based variable lookups
         for (i in seq_along(events[[1]])) {
           event <- events[[1]][i]
           called_var <- called_vars[[1]][i]
+          instrument <- dic$form_name[dic$field_name == called_vars]
+          if ("redcap_repeat_instrument" %in% names(data)) {
+          instrument <- ifelse(!(instrument %in% data$redcap_repeat_instrument), "", instrument)
 
-          cell <- str_replace_all(cell, paste0(event, "\\^", called_var),
-                                  paste0(
-                                    "data[which(data$redcap_event_name == \"",
-                                    event,
-                                    "\" & data$record_id == data$record_id[i]), \"",
-                                    called_var, "\"]"
-                                  ))
+          cell <- str_replace_all(
+            cell,
+            paste0(event, "\\^\\^\\^", called_var),
+            paste0("data[which(data$redcap_event_name == \"", event, "\" & data$record_id == data$record_id[i] & data$redcap_repeat_instrument == \'", instrument, "\'), \"", called_var, "\"]"))
+          } else {
+            cell <- str_replace_all(
+              cell,
+              paste0(event, "\\^\\^\\^", called_var),
+              paste0("data[which(data$redcap_event_name == \"", event, "\" & data$record_id == data$record_id[i]), \"", called_var, "\"]"))
+          }
         }
 
-        cell <- str_replace_all(cell, "event-name", "redcap_event_name")
-        cell <- str_replace_all(cell, '""', '"')
-        cell <- gsub("data\\$data\\[", "data\\[", cell)
 
       } else {
-        cell <- str_replace_all(cell, "\\[", "data$`")
-        cell <- str_replace_all(cell, "\\]", "`[i]")
-        cell <- str_replace_all(cell, "\\bor\\b|\\bOR\\b", "|")
-        cell <- str_replace_all(cell, "\\band\\b|\\bAND\\b", "&")
-        cell <- str_replace_all(cell, "=", "==")
-        cell <- str_replace_all(cell, ">==", ">=")
-        cell <- str_replace_all(cell, "<==", "<=")
-        cell <- str_replace_all(cell, "<>", "!=")
-        cell <- str_replace_all(cell, "event-name", "redcap_event_name")
-        cell <- str_replace_all(cell, '""', '"')
-        cell <- gsub("data\\$data\\[", "data\\[", cell)
+        # Handle logic without event references
+        cell <- cell %>%
+          str_replace_all("\\[", "data$`") %>%
+          str_replace_all("\\]", "`[i]") %>%
+          str_replace_all("\\bor\\b|\\bOR\\b", "|") %>%
+          str_replace_all("\\band\\b|\\bAND\\b", "&") %>%
+          str_replace_all("=", "==") %>%
+          str_replace_all(">==", ">=") %>%
+          str_replace_all("<==", "<=") %>%
+          str_replace_all("<>", "!=")
       }
 
-      cell <- paste0("unique(na.omit(", cell, "))")
-      cell <- str_trim(cell)
-      cell <- gsub("[\r\n]", "", cell)
-      cell <- ifelse(cell == "unique(na.omit())", NA, cell)
+      # Replace REDCap special variables
+      cell <- cell %>%
+        str_replace_all("event-name", "redcap_event_name") %>%
+        str_replace_all("record-dag-name", "redcap_data_access_group") %>%
+        str_replace_all("user-dag-name", "redcap_data_access_group") %>%
+        str_replace_all('""', '"') %>%
+        str_trim() %>%
+        str_replace_all("[\r\n]", "") %>%
+        str_replace_all("\\( ", "\\(") %>%
+        str_replace_all(" \\)", "\\)") %>%
+        na_if("")
+
     }
     return(cell)
   }
 
-  data_dictionary[[column_name]] <- sapply(data_dictionary[[column_name]], process_cell)
+  logic[[column_name]] <- sapply(logic[[column_name]], process_cell)
 
   if (isblankormissingcode_detected && is.null(missing_data_codes)) {
     message("No missing_data_codes specified. Using default: ", paste(default_missing_data_codes, collapse = ", "))
   }
 
-  return(data_dictionary)
+  return(logic)
 }
