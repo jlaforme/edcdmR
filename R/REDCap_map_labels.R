@@ -3,7 +3,7 @@
 #'@description Allows to map caterogical values of a REDCap dataset to their respective data dictionary labels. Only applicable to radio and dropdown variables.
 #'
 #' @param data The REDCap data to map
-#' @param data_dictionary The REDCap data dictionary
+#' @param dictionary The REDCap data dictionary
 #' @param variables Variable(s) to map; defaults to all
 #'
 #' @returns A dataset with mapped values
@@ -11,12 +11,12 @@
 #'
 #' @examples
 
-REDCap_map_labels <- function(data, data_dictionary, variables = "All") {
+REDCap_map_labels <- function(data, dictionary, variables = "All") {
 
   # Clean the dd
-  data_dictionary <- data_dictionary %>%
+  dictionary <- dictionary %>%
     mutate(across(where(is.character), ~ na_if(., ""))) %>%
-    rename_with(~ ifelse(str_detect(., regex("var|field name", ignore_case = TRUE)), "var_name", .)) %>%
+    rename_with(~ ifelse(str_detect(., regex("var|field name|field_name", ignore_case = TRUE)), "var_name", .)) %>%
     rename_with(~ ifelse(str_detect(., regex("form", ignore_case = TRUE)), "form_name", .)) %>%
     rename_with(~ ifelse(str_detect(., regex("branching|logic", ignore_case = TRUE)), "branching_logic", .)) %>%
     rename_with(~ ifelse(str_detect(., regex("field type", ignore_case = TRUE)), "field_type", .)) %>%
@@ -29,21 +29,44 @@ REDCap_map_labels <- function(data, data_dictionary, variables = "All") {
     filter(nchar(coding) > 2) %>%
 
     mutate(coding = gsub("(?<=\\d),(?= )", "` = \"", coding, perl = TRUE),
-           coding = gsub("\\|", '", `', coding),
+           coding = gsub("\\| ", '", `', coding),
            coding = paste0("`", coding, '"'),  # Add " at the end
-           coding = gsub('=\\s+"\\s*([^"]+?)\\s*"', '= "\\1"', coding))  # Trim spaces inside quotes
+           coding = gsub('=\\s+"\\s*([^"]+?)\\s*"', '= "\\1"', coding),
+           coding = str_trim(coding))  # Trim spaces inside quotes
+
+  new_rows <- dictionary %>%
+    # Filter to process only the rows where field_type is "checkbox"
+    filter(field_type == "checkbox") %>%
+    # Separate the 'coding' text into multiple rows by splitting by commas
+    mutate(coding = str_split(coding, ", (?=`[0-9]+` =)")) %>%
+    unnest(coding) %>%
+    # Extract the numeric code and corresponding description (without quotes)
+    mutate(
+      num = str_extract(coding, "`([0-9-]+)`"),  # Extract the numbers between the backticks
+      description = str_extract(coding, "(?<= = \").*(?=\")"),  # Extract the description after '=' without quotes
+      var_name = paste(var_name, num, sep = "___"),
+      var_name = gsub("`", "", var_name),
+      var_name = gsub("_-", "__", var_name),
+      coding = str_replace_all(coding, "\`[^\"]*\`", "\`1\`")) %>%
+    select(-c(num, description))
+
+  dictionary <- dictionary %>%
+    filter(field_type != "checkbox") %>%
+    rbind(new_rows)
+
+
 
   # Clean the variables argument
-  if (any(variables %in% c("All", "all", "ALL"))) {
-    variables <- data_dictionary$var_name
+  if (is.null(variables) || any(variables %in% c("All", "all", "ALL"))) {
+    variables <- names(data)
   }
 
-  data_dictionary <- data_dictionary %>%
+  dictionary <- dictionary %>%
     filter(var_name %in% c(variables))
 
 
 
-  valid_vars <- intersect(data_dictionary$var_name, names(data))
+  valid_vars <- intersect(dictionary$var_name, names(data))
 
 
   data_labels_conv <- data %>%
@@ -53,7 +76,7 @@ REDCap_map_labels <- function(data, data_dictionary, variables = "All") {
                     if (is.logical(.)) {
                       . <- as.character(.)
                     }
-                    eval(parse(text = paste0("recode(", data_dictionary$var_name[data_dictionary$var_name == cur_column()], ", ", data_dictionary$coding[data_dictionary$var_name == cur_column()], ")")))
+                    eval(parse(text = paste0("recode(", dictionary$var_name[dictionary$var_name == cur_column()], ", ", dictionary$coding[dictionary$var_name == cur_column()], ", .default = NA_character_)")))
                   }))
 
   return(data_labels_conv)
