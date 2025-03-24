@@ -25,7 +25,7 @@ REDCap_map_labels <- function(data, data_dictionary, variables = "All") {
     rename_with(~ ifelse(str_detect(., regex("required", ignore_case = TRUE)), "required_field", .)) %>%
     rename_with(~ ifelse(str_detect(., regex("choice|coding", ignore_case = TRUE)), "coding", .)) %>%
 
-    filter(field_type %in% c("radio", "dropdown")) %>%
+    filter(field_type %in% c("radio", "dropdown", "checkbox")) %>%
     filter(nchar(coding) > 2) %>%
 
     mutate(coding = gsub("(?<=\\d),(?= )", "` = \"", coding, perl = TRUE),
