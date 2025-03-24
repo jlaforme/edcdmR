@@ -12,8 +12,7 @@
 #' @examples
 
 REDCap_map_labels <- function(data, dictionary, variables = "All") {
-dictionary <- project$dictionary
-data <- project$data
+
   # Clean the dd
   dictionary <- dictionary %>%
     mutate(across(where(is.character), ~ na_if(., ""))) %>%
