@@ -12,7 +12,8 @@
 #' @examples
 
 REDCap_map_labels <- function(data, dictionary, variables = "All") {
-
+dictionary <- project$dictionary
+data <- project$data
   # Clean the dd
   dictionary <- dictionary %>%
     mutate(across(where(is.character), ~ na_if(., ""))) %>%
@@ -38,7 +39,7 @@ REDCap_map_labels <- function(data, dictionary, variables = "All") {
     # Filter to process only the rows where field_type is "checkbox"
     filter(field_type == "checkbox") %>%
     # Separate the 'coding' text into multiple rows by splitting by commas
-    mutate(coding = str_split(coding, ", (?=`[0-9]+` =)")) %>%
+    mutate(coding = str_extract_all(coding, "`[0-9-]+` = \"[^\"]+\"")) %>%
     unnest(coding) %>%
     # Extract the numeric code and corresponding description (without quotes)
     mutate(
