@@ -19,9 +19,7 @@ REDCap_filter <- function(data, dictionary, id_variable, forms = NULL, variables
   library(xml2)
   library(tidyr)
   library(stringr)
-data <- project$data
-dictionary <- project$dictionary
-variables = c("iec_q005", "pld_q001", "pld_q003___0", "pld_q003___1", "pld_q003___2", "pld_q003___3", "pld_q003___4", "pld_q003___5", "pld_q003___6", "pld_q003___7", "pld_q003____7777")
+
   # Clean data
   # Data dictionnary
   dictionary <- dictionary %>%
