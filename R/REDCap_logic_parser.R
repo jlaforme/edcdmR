@@ -2,10 +2,12 @@
 #'
 #' @description This function translate REDCap logic, conditions and calculations to useable R codes.
 #'
-#' @param logic REDCap data dictionary
+#' @param ... List containing the REDCap data and dictionary. This should be the output of the `REDCap_import` function.
+#' @param data Data frame containing the REDCap data. If a list (...) is specified, this argument is not required.
+#' @param dictionary Data frame containing the REDCap dictionary. If a list (...) is specified, this argument is not required.
+#' @param logic Dataset or character vector containing the REDCap logic(s).
 #' @param column_name Name of the column containing containing the REDCap logic in the data dictionary
 #' @param missing_data_codes Codes used to specify missing data; defaults to c("NA", "na")
-#' @param loop Indicates wether you want to use the logic in a loop in the future (adds [i] after each variable calling and encapsulate each logic in unique(na.omit())); defaults to 0
 #'
 #' @returns A dataframe with "column_name" parsed
 #' @export
@@ -13,13 +15,34 @@
 #' @examples REDCap_logic_parser(logic = REDCap_logic, column_name = "branching_logic")
 #' @examples REDCap_logic_parser(logic = dd_export, column_name = "branching logic", missing_data_codes = c("-9999", "-999"))
 
-REDCap_logic_parser <- function(logic, column_name = NULL, missing_data_codes = NULL, loop = TRUE) {
+REDCap_logic_parser <- function(..., data = NULL, dictionary = NULL, logic, column_name = NULL, missing_data_codes = NULL) {
 
   library(dplyr)
   library(stringr)
   library(lubridate)
 
+  project <- c(...)
+
   # Checks
+  if(!is.null(project)){
+    if(!is.null(data)){
+      warning("Data has been specified twice so the function will not use the information in the data argument.")
+    }
+
+    if(!is.null(dictionary)){
+      warning("Dictionary has been specified twice so the function will not use the information in the dic argument.")
+    }
+
+    data <- project$data
+    dictionary <- project$dictionary
+  }
+
+  # Assign project object
+  if(!is.null(project)){
+    dictionary <- project$dictionary
+    data <- project$data
+  }
+
   if (is.data.frame(logic) && is.null(column_name)) {
     stop("A data frame was provided for 'logic', but no 'column_name' was specified. Please provide the name of the column containing the logic(s).")
   }
@@ -32,6 +55,8 @@ REDCap_logic_parser <- function(logic, column_name = NULL, missing_data_codes = 
     logic <- as.data.frame(logic)
     column_name <- "logic"
   }
+
+
 
   # Default missing data codes
   default_missing_data_codes <- c("NA", "na")
@@ -62,6 +87,17 @@ REDCap_logic_parser <- function(logic, column_name = NULL, missing_data_codes = 
     })
   }
 
+
+  # Clean the dd
+  dictionary <- dictionary %>%
+    mutate(across(where(is.character), ~ na_if(., ""))) %>%
+    rename_with(~ ifelse(str_detect(., regex("var|field name|field_name", ignore_case = TRUE)), "var_name", .)) %>%
+    rename_with(~ ifelse(str_detect(., regex("form", ignore_case = TRUE)), "form_name", .)) %>%
+    rename_with(~ ifelse(str_detect(., regex("branching|logic", ignore_case = TRUE)), "branching_logic", .)) %>%
+    rename_with(~ ifelse(str_detect(., regex("field type", ignore_case = TRUE)), "field_type", .)) %>%
+    rename_with(~ ifelse(str_detect(., regex("header|section", ignore_case = TRUE)), "section_header", .)) %>%
+    rename_with(~ ifelse(str_detect(., regex("field label", ignore_case = TRUE)), "field_label", .)) %>%
+    rename_with(~ ifelse(str_detect(., regex("required", ignore_case = TRUE)), "required_field", .))
 
   # Clean the logic if not null
   logic <- logic %>%
@@ -584,19 +620,44 @@ REDCap_logic_parser <- function(logic, column_name = NULL, missing_data_codes = 
         for (i in seq_along(events[[1]])) {
           event <- events[[1]][i]
           called_var <- called_vars[[1]][i]
-          instrument <- dic$form_name[dic$field_name == called_vars]
-          if ("redcap_repeat_instrument" %in% names(data)) {
-          instrument <- ifelse(!(instrument %in% data$redcap_repeat_instrument), "", instrument)
 
-          cell <- str_replace_all(
-            cell,
-            paste0(event, "\\^\\^\\^", called_var),
-            paste0("data[which(data$redcap_event_name == \"", event, "\" & data$record_id == data$record_id[i] & data$redcap_repeat_instrument == \'", instrument, "\'), \"", called_var, "\"]"))
-          } else {
+          # Get the instrument name from the dictionary
+          instrument <- dictionary$form_name[dictionary$var_name == called_var]
+
+          if ("redcap_repeat_instrument" %in% names(data)) {
+            # Handle cases where redcap_repeat_instrument has "" or NA
+            if (!(instrument %in% data$redcap_repeat_instrument)) {
+              if (any(data$redcap_repeat_instrument == "", na.rm = TRUE)) {
+                instrument <- ""
+              } else {
+                instrument <- NA
+              }
+            }
+
+            # Construct condition based on whether instrument is NA
+            if (is.na(instrument)) {
+              condition <- paste0("is.na(data$redcap_repeat_instrument)")
+            } else {
+              condition <- paste0("data$redcap_repeat_instrument == '", instrument, "'")
+            }
+
+            # Replace placeholders in 'cell' when redcap_repeat_instrument is present
             cell <- str_replace_all(
               cell,
               paste0(event, "\\^\\^\\^", called_var),
-              paste0("data[which(data$redcap_event_name == \"", event, "\" & data$record_id == data$record_id[i]), \"", called_var, "\"]"))
+              paste0("data[which(data$redcap_event_name == \"", event,
+                     "\" & data$record_id == data$record_id[i] & ", condition, "), \"",
+                     called_var, "\"]")
+            )
+          } else {
+            # Replace placeholders in 'cell' when redcap_repeat_instrument is NOT present
+            cell <- str_replace_all(
+              cell,
+              paste0(event, "\\^\\^\\^", called_var),
+              paste0("data[which(data$redcap_event_name == \"", event,
+                     "\" & data$record_id == data$record_id[i]), \"",
+                     called_var, "\"]")
+            )
           }
         }
 
@@ -624,6 +685,7 @@ REDCap_logic_parser <- function(logic, column_name = NULL, missing_data_codes = 
         str_replace_all("[\r\n]", "") %>%
         str_replace_all("\\( ", "\\(") %>%
         str_replace_all(" \\)", "\\)") %>%
+        str_replace_all('!="', "!=''") %>%
         na_if("")
 
     }

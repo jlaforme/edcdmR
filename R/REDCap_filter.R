@@ -17,12 +17,14 @@
 REDCap_filter <- function(data, data_dictionary, id_variable, forms = NULL, variables = NULL) {
   library(dplyr)
   library(xml2)
+  library(tidyr)
+  library(stringr)
 
   # Clean data
   # Data dictionnary
   data_dictionary <- data_dictionary %>%
     mutate(across(where(is.character), ~ na_if(., ""))) %>%
-    rename_with(~ ifelse(str_detect(., regex("var|field name", ignore_case = TRUE)), "var_name", .)) %>%
+    rename_with(~ ifelse(str_detect(., regex("var|field name|field_name", ignore_case = TRUE)), "var_name", .)) %>%
     rename_with(~ ifelse(str_detect(., regex("form", ignore_case = TRUE)), "form_name", .)) %>%
     rename_with(~ ifelse(str_detect(., regex("branching|logic", ignore_case = TRUE)), "branching_logic", .)) %>%
     rename_with(~ ifelse(str_detect(., regex("field type", ignore_case = TRUE)), "field_type", .)) %>%
@@ -44,22 +46,25 @@ REDCap_filter <- function(data, data_dictionary, id_variable, forms = NULL, vari
   })]
 
 
+  # Define the id_variable
+  id_variable <- data_dictionary$var_name[1]
+
   # Fill the forms if empty
   if (is.null(forms)) {
     forms = unique(data_dictionary$form_name)
   }
 
-  if (variables %in% c("All", "all") | is.null(variables)) {
-    variables = names(data)
+  if (is.null(variables) || length(variables) == 0 || any(variables %in% c("All", "all"))) {
+    variables <- names(data)
   }
 
 
   # Data
   data_filtered <- data %>%
     mutate(across(where(is.character), ~na_if(., ""))) %>%
-    select({{id_variable}}, metadata_columns, starts_with(data_dictionary$var_name[data_dictionary$form_name %in% forms])) %>%
+    select({{id_variable}}, all_of(metadata_columns), starts_with(data_dictionary$var_name[data_dictionary$form_name %in% forms])) %>%
     filter(redcap_repeat_instrument %in% forms) %>%
-    filter(!if_all(-c({{id_variable}}, metadata_columns), is.na)) %>%
+    filter(!if_all(-c({{id_variable}}, all_of(metadata_columns)), is.na)) %>%
     select({{id_variable}}, all_of(metadata_columns), any_of(variables))
 
   return(data_filtered)

@@ -5,20 +5,26 @@
 \title{Translate REDCap logic to R}
 \usage{
 REDCap_logic_parser(
+  ...,
+  data = NULL,
+  dictionary = NULL,
   logic,
   column_name = NULL,
-  missing_data_codes = NULL,
-  loop = 0
+  missing_data_codes = NULL
 )
 }
 \arguments{
-\item{logic}{REDCap data dictionary}
+\item{...}{List containing the REDCap data and dictionary. This should be the output of the \code{REDCap_import} function.}
+
+\item{data}{Data frame containing the REDCap data. If a list (...) is specified, this argument is not required.}
+
+\item{dictionary}{Data frame containing the REDCap dictionary. If a list (...) is specified, this argument is not required.}
+
+\item{logic}{Dataset or character vector containing the REDCap logic(s).}
 
 \item{column_name}{Name of the column containing containing the REDCap logic in the data dictionary}
 
 \item{missing_data_codes}{Codes used to specify missing data; defaults to c("NA", "na")}
-
-\item{loop}{Indicates wether you want to use the logic in a loop in the future (adds \link{i} after each variable calling and encapsulate each logic in unique(na.omit())); defaults to 0}
 }
 \value{
 A dataframe with "column_name" parsed

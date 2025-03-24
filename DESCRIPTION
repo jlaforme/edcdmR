@@ -15,4 +15,7 @@ Imports:
     lubridate,
     jsonlite,
     xml2,
+    stringr,
+    progress,
+    tidyr,
     stringr
