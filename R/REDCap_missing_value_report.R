@@ -7,7 +7,7 @@
 #' @param InstrumentSkip Data frame containing the mapping of each form with each event. If a list (...) is specified, this argument is not required.
 #' @param event_description Data frame containing the description of each event. If a list (...) is specified, this argument is not required.
 #' @param id_variable Character vector of lenght 1 containing the name of the ID variable (identifier).
-#' @param start_of_tx_variable Character vector of lenght 1 containing the name of the variable containing the start of treatment date (identifier).
+#' @param start_of_tx_variable Character vector of lenght 1 containing the name of the variable containing the start of treatment date.
 #'
 #' @returns
 #' @export
@@ -49,26 +49,28 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
 
   # Assign project object
   if(!is.null(project)){
-  dictionary <- project$dictionary
-  data <- project$data
-  event_form <- project$event_form
-  event_description <- project$event_description
+    dictionary <- project$dictionary
+    data <- project$data
+    event_form <- project$event_form
+    event_description <- project$event_description
   }
 
+
   # Declare variables and objects
-  t0_variable <- start_of_tx_variable <- "cva_q005"  # define which variable (date) refers as the start of the study data collection
-  id_variable <- id_variable <- "record_id"  # define which variable contains the participant's ID
+  t0_variable <- start_of_tx_variable  # define which variable (date) refers as the start of the study data collection
+  id_variable <- id_variable # define which variable contains the participant's ID
 
 
 
   # Clean data and data_dictionnary
-   # data
+  # data
   data <- data %>%
-    mutate(across(where(is.character), ~na_if(., ""))) %>%
+    mutate(across(where(function(x) inherits(x, "labelled")), as.character)) %>%
+    mutate(across(where(is.character), ~ na_if(., ""))) %>%
     rename(record_id = !!sym(id_variable))
   colnames(data) <- gsub("____", "___", colnames(data))
 
-   # dictionary
+  # dictionary
   dictionary <- dictionary %>%
     mutate(across(where(is.character), ~ na_if(., ""))) %>%
     rename_with(~ ifelse(str_detect(., regex("var|field name|field_name", ignore_case = TRUE)), "var_name", .)) %>%
@@ -109,8 +111,8 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
 
 
   # Create empty dataset if the dataset is not available
-   # InstrumentSkip
-  if (is.null("InstrumentSkip")) {
+  # InstrumentSkip
+  if (is.null(InstrumentSkip)) {
     InstrumentSkip <- data.frame(
       form_name = character(),
       event_name = character(),
@@ -119,14 +121,15 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
     )
   }
 
-   # EventDescription missing and event_form not missing
-  if (is.null("event_description") & exists("event_form")) {
+  # EventDescription missing and event_form not missing
+  if (is.null(event_description) & exists("event_form")) {
     event_form <- event_form %>%
       mutate(across(where(is.character), ~na_if(., ""))) %>%
       rename_with(~ ifelse(str_detect(., regex("form", ignore_case = TRUE)), "form_name", .)) %>%
       rename_with(~ ifelse(str_detect(., regex("event", ignore_case = TRUE)), "event_name", .))
 
     event_description <- event_form %>%
+      rename_with(~ ifelse(str_detect(., regex("event", ignore_case = TRUE)), "unique_event_name", .)) %>%
       select(unique_event_name) %>%
       distinct() %>%
       mutate(day_offset = 0,
@@ -135,8 +138,8 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
 
   }
 
-   # event_description and event_form missing
-  if (is.null("event_description") & is.null("event_form")) {
+  # event_description and event_form missing
+  if (is.null(event_description) & is.null(event_form)) {
     event_description <- data.frame(
       event_name = "Baseline",
       day_offset = 0,
@@ -154,18 +157,24 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
     data$redcap_event_name <- "baseline"
   }
 
+  # Create redcap_repeat_instrument if does not exist in data
+  if (!"redcap_repeat_instrument" %in% data) {
+    data <- data %>%
+      mutate(redcap_repeat_instrument = NA_character_) %>%
+      relocate(redcap_repeat_instrument, .after = 1)
+  }
 
 
   # Clean InstrumentSkip, and event_form
-   # InstrumentSkip
+  # InstrumentSkip
   InstrumentSkip <- InstrumentSkip %>%
     mutate(across(where(is.character), ~na_if(., ""))) %>%
     mutate(across(where(is.character), ~na_if(., ""))) %>%
     rename_with(~ ifelse(str_detect(., regex("event", ignore_case = TRUE)), "event_name", .)) %>%
     rename_with(~ ifelse(str_detect(., regex("form", ignore_case = TRUE)), "form_name", .)) %>%
-    rename_with(~ ifelse(str_detect(., regex("control", ignore_case = TRUE)), "control_condition", .))
+    rename_with(~ ifelse(str_detect(., regex("control|condition", ignore_case = TRUE)), "control_condition", .))
 
-   # event_form
+  # event_form
   event_form <- event_form %>%
     mutate(across(where(is.character), ~na_if(., ""))) %>%
     rename_with(~ ifelse(str_detect(., regex("form", ignore_case = TRUE)), "form_name", .)) %>%
@@ -222,14 +231,14 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
     return(validation_results)
   }
 
-   # Branching logic
+  # Branching logic
   branching_logic <- dictionary %>%
     select(form_name, var_name, branching_logic)
 
   branching_logic <- REDCap_logic_parser(data = data, dictionary = dictionary, logic = branching_logic, column_name = "branching_logic")
   validation_results <- validate_redcap_condition(branching_logic, "branching_logic")
 
-   # Control Condition (InstrumentSkip)
+  # Control Condition (InstrumentSkip)
   if (nrow(InstrumentSkip) > 0) {
     InstrumentSkip <- REDCap_logic_parser(data = data, dictionary = dictionary, logic = InstrumentSkip, column_name = "control_condition")
     validation_results <- validate_redcap_condition(InstrumentSkip, "control_condition")
@@ -242,23 +251,23 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
                                       nrow = nrow(data),
                                       ncol = ncol(data)))
 
-   # Identify metadata columns as those not present in the data dictionary and exclude '_complete' columns
+  # Identify metadata columns as those not present in the data dictionary and exclude '_complete' columns
   metadata_columns <- names(data)[!sapply(names(data), function(x) {
     base_var <- strsplit(x, "___")[[1]][1]
     base_var %in% dictionary$var_name | grepl("_complete$", x)
   })]
 
-   # Dynamically determine the starting column for looping
+  # Dynamically determine the starting column for looping
   start_col <- which(!names(data) %in% metadata_columns)[1]
 
-   # Ensure start_col is not 1L, if it is, shift to the next valid column
+  # Ensure start_col is not 1L, if it is, shift to the next valid column
   if (start_col == 1L) {
     start_col <- which(!names(data)[2:ncol(data)] %in% metadata_columns)[1] + 1  # Shift to next non-metadata column
   }
 
 
-   # Loop through the matrix_missing
-    # Set a progression bar
+  # Loop through the matrix_missing
+  # Set a progression bar
   pb <- progress::progress_bar$new(
     total = nrow(data),
     format = "  [:bar] :percent Estimated time left: :eta",
@@ -266,7 +275,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   )
 
 
-   # Initiate the table to store the excluded form for InstrumentSkip
+  # Initiate the table to store the excluded form for InstrumentSkip
   for (i in 1:nrow(data)) {
     for (ii in start_col:ncol(data)) {
 
@@ -314,12 +323,12 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
                     next
 
                   } else if ((is.na(data[i, ii]) & is.na(logic) & (is.na(form_logic) | (!is.na(eval(parse(text = form_logic))) & eval(parse(text = form_logic)))))  & (!is.na(data$redcap_repeat_instrument[i]) &&
-                                                                                                                                                                        data$redcap_repeat_instrument[i] == form_name)) {
+                                                                                                                                                                       data$redcap_repeat_instrument[i] == form_name)) {
                     matrix_missing[i, ii] <- 1
                     next
 
                   } else if ((is.na(data[i, ii]) & (!is.na(eval(parse(text = logic))) & eval(parse(text = logic)))) & (!is.na(data$redcap_repeat_instrument[i]) &&
-                                                                                                                        data$redcap_repeat_instrument[i] == form_name)) {
+                                                                                                                       data$redcap_repeat_instrument[i] == form_name)) {
                     matrix_missing[i, ii] <- 1
                     next
 
@@ -327,7 +336,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
                     matrix_missing[i, ii] <- 0
                     next
                   }
-                  } else {
+                } else {
                   # If form_logic is not FALSE, assign 99
                   matrix_missing[i, ii] <- 99
                   next
@@ -395,7 +404,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   rm(pb, i, ii, form_logic, logic, is_repeated, variable_name, validation_results)
 
 
-   # Set back to the original data names
+  # Set back to the original data names
   names(matrix_missing) <- names(data)
   matrix_missing[, 1:(start_col-1)] <- data[, 1:(start_col-1)]
 
@@ -415,6 +424,10 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   table_missing$record_id <- matrix_missing[idx_missing$row, which(names(matrix_missing) == "record_id")]
   table_missing$redcap_event_name <- matrix_missing[idx_missing$row, which(names(matrix_missing) == "redcap_event_name")]
   table_missing$redcap_repeat_instance <- matrix_missing[idx_missing$row, which(names(matrix_missing) == "redcap_repeat_instance")]
+  # If there is no redcap_repeat_instance in data, create an empty one
+  if ("redcap_repeat_instance" %in% colnames(table_missing) && (all(is.na(table_missing$redcap_repeat_instance))|all(table_missing$redcap_repeat_instance == ""))) {
+    table_missing$redcap_repeat_instance <- NA
+  }
   table_missing$var_name <- names(matrix_missing)[idx_missing$col]
   table_missing$form_name <- ifelse(variable_exists_missing, dictionary$form_name[match(variable_names_missing, dictionary$var_name)], NA)
 
@@ -435,6 +448,10 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   table_complete$record_id <- matrix_missing[idx_complete$row, which(names(matrix_missing) == "record_id")]
   table_complete$redcap_event_name <- matrix_missing[idx_complete$row, which(names(matrix_missing) == "redcap_event_name")]
   table_complete$redcap_repeat_instance <- matrix_missing[idx_complete$row, which(names(matrix_missing) == "redcap_repeat_instance")]
+  # If there is no redcap_repeat_instance in data, create an empty one
+  if ("redcap_repeat_instance" %in% colnames(table_complete) && (all(is.na(table_complete$redcap_repeat_instance))|all(table_complete$redcap_repeat_instance == ""))) {
+    table_complete$redcap_repeat_instance <- NA
+  }
   table_complete$var_name <- names(matrix_missing)[idx_complete$col]
   table_complete$form_name <- ifelse(variable_exists_complete, dictionary$form_name[match(variable_names_complete, dictionary$var_name)], NA)
 
@@ -453,7 +470,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
 
 
   # Create the table containing the table_missing (missing variables) and the "unstarted questionnaires" (InstrumentDesignation - table_missing - table_complete)
-   # Create an index of rows and columns where matrix_missing values are 7 (excluded form for a specific ID)
+  # Create an index of rows and columns where matrix_missing values are 7 (excluded form for a specific ID)
   idx_excluded_form <- which(matrix_missing[, start_col:ncol(matrix_missing)] == 7, arr.ind = TRUE)
   idx_excluded_form[, "col"] <- idx_excluded_form[, "col"] + (start_col-1)
   idx_excluded_form <- as_tibble(idx_excluded_form, .name_repair = "minimal")
@@ -468,6 +485,10 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   table_excluded_form$record_id <- matrix_missing[idx_excluded_form$row, which(names(matrix_missing) == "record_id")]
   table_excluded_form$redcap_event_name <- matrix_missing[idx_excluded_form$row, which(names(matrix_missing) == "redcap_event_name")]
   table_excluded_form$redcap_repeat_instance <- matrix_missing[idx_excluded_form$row, which(names(matrix_missing) == "redcap_repeat_instance")]
+  # If there is no redcap_repeat_instance in data, create an empty one
+  if ("redcap_repeat_instance" %in% colnames(table_excluded_form) && (all(is.na(table_excluded_form$redcap_repeat_instance))|all(table_excluded_form$redcap_repeat_instance == ""))) {
+    table_excluded_form$redcap_repeat_instance <- NA
+  }
   table_excluded_form$var_name <- names(matrix_missing)[idx_excluded_form$col]
   table_excluded_form$form_name <- as.character(ifelse(variable_exists_excluded_form, dictionary$form_name[match(variable_names_excluded_form, dictionary$var_name)], NA))
   table_excluded_form <- table_excluded_form %>%
@@ -476,7 +497,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
 
   rm(idx_excluded_form, variable_names_excluded_form, variable_exists_excluded_form)
 
-   # Create the unstarted questionnaire table
+  # Create the unstarted questionnaire table
   table_unstarted_qx <- merge(event_form, as.data.frame(unique(data$record_id)), by = NULL) %>%
     rename(record_id = "unique(data$record_id)") %>%
     rename(redcap_event_name = event_name) %>%
@@ -486,13 +507,13 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
 
     mutate(var_name = "All")
 
-   # Create the complete report (table_missing + table_unstarted_qx)
+  # Create the complete report (table_missing + table_unstarted_qx)
   missing_cols <- setdiff(names(table_missing), names(table_unstarted_qx))
   table_unstarted_qx[missing_cols] <- NA
   table_unstarted_qx <- table_unstarted_qx[names(table_missing)]
   rm(missing_cols)
 
-   # Filter out non overdue variables/questionnaires
+  # Filter out non overdue variables/questionnaires
   table_missing <- table_missing %>%
     rbind(table_unstarted_qx) %>%
     left_join(data %>%
@@ -521,7 +542,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
 
     select(-c(!!sym(t0_variable), day_offset, offset_max, offset_min))
 
-   # Add the question header and label, required, and add the t0_variable
+  # Add the question header and label, required, and add the t0_variable
   table_missing <- table_missing %>%
     left_join(dictionary %>% select(var_name, form_name, section_header, field_label, required_field), by = c("var_name", "form_name")) %>%
     left_join(data %>%
@@ -540,7 +561,14 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
     relocate(required_field, .after = field_label) %>%
     mutate(required_field = ifelse(var_name == "All", "y", required_field))
 
+  # Clean the output if needed
+  if (all(is.na(table_missing$redcap_repeat_instance))) {
+    table_missing <- table_missing %>%
+      select(-redcap_repeat_instance)
+  }
+
   return(table_missing)
 }
+
 
 
