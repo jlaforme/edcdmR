@@ -33,7 +33,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
     }
 
     if(!is.null(dictionary)){
-      warning("Dictionary has been specified twice so the function will not use the information in the dic argument.")
+      warning("Dictionary has been specified twice so the function will not use the information in the dictionary argument.")
     }
 
     data <- project$data
@@ -44,6 +44,13 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
         warning("Event form has been specified twice so the function will not use the information in the event_form argument.")
       }
       event_form <- as.data.frame(project$event_form)
+    }
+
+    if("event_description" %in% names(project)) {
+      if(!is.null(event_description)){
+        warning("Event description form has been specified twice so the function will not use the information in the event_description argument.")
+      }
+      event_description <- as.data.frame(project$event_description)
     }
   }
 
@@ -73,13 +80,16 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   # dictionary
   dictionary <- dictionary %>%
     mutate(across(where(is.character), ~ na_if(., ""))) %>%
-    rename_with(~ ifelse(str_detect(., regex("var|field name|field_name", ignore_case = TRUE)), "var_name", .)) %>%
-    rename_with(~ ifelse(str_detect(., regex("form", ignore_case = TRUE)), "form_name", .)) %>%
-    rename_with(~ ifelse(str_detect(., regex("branching|logic", ignore_case = TRUE)), "branching_logic", .)) %>%
-    rename_with(~ ifelse(str_detect(., regex("field type", ignore_case = TRUE)), "field_type", .)) %>%
-    rename_with(~ ifelse(str_detect(., regex("header|section", ignore_case = TRUE)), "section_header", .)) %>%
-    rename_with(~ ifelse(str_detect(., regex("field label", ignore_case = TRUE)), "field_label", .)) %>%
-    rename_with(~ ifelse(str_detect(., regex("required", ignore_case = TRUE)), "required_field", .)) %>%
+    rename_with(~ case_when(
+      str_detect(., regex("var|field name|field_name", ignore_case = TRUE)) ~ "var_name",
+      str_detect(., regex("form", ignore_case = TRUE)) ~ "form_name",
+      str_detect(., regex("branching|logic", ignore_case = TRUE)) ~ "branching_logic",
+      str_detect(., regex("field type", ignore_case = TRUE)) ~ "field_type",
+      str_detect(., regex("header|section", ignore_case = TRUE)) ~ "section_header",
+      str_detect(., regex("field label", ignore_case = TRUE)) ~ "field_label",
+      str_detect(., regex("required", ignore_case = TRUE)) ~ "required_field",
+      TRUE ~ .
+    )) %>%
 
     filter(field_type != "descriptive") %>%
 
@@ -92,16 +102,12 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
     mutate(
       section_header = ifelse(
         !is.na(section_header) & grepl("<.*?>", section_header),
-        sapply(section_header, function(x) {
-          tryCatch(xml_text(read_html(x)), error = function(e) NA)
-        }),
+        map_chr(section_header, ~ tryCatch(xml_text(read_html(.x)), error = function(e) NA)),
         section_header
       ),
       field_label = ifelse(
         !is.na(field_label) & grepl("<.*?>", field_label),
-        sapply(field_label, function(x) {
-          tryCatch(xml_text(read_html(x)), error = function(e) NA)
-        }),
+        map_chr(field_label, ~ tryCatch(xml_text(read_html(.x)), error = function(e) NA)),
         field_label
       )
     ) %>%
