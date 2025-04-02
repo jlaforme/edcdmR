@@ -164,7 +164,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   }
 
   # Create redcap_repeat_instrument if does not exist in data
-  if (!"redcap_repeat_instrument" %in% data) {
+  if (!"redcap_repeat_instrument" %in% names(data)) {
     data <- data %>%
       mutate(redcap_repeat_instrument = NA_character_) %>%
       relocate(redcap_repeat_instrument, .after = 1)
