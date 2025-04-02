@@ -1,6 +1,6 @@
 Package: edcdmR
 Title: Manage electronic data capture (EDC) system data.
-Version: 0.0.0.9000
+Version: 1.0.0
 Authors@R: 
     person("Jerome", "Laforme", , "jerome_4488@outlook.com", role = c("aut", "cre"))
 Description: This package is intended to manage electronic data capture (EDC) system data.
