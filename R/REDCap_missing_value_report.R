@@ -21,6 +21,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   library(progress)
   library(tidyr)
   library(stringr)
+  library(purrr)
 
   # Assign project
   project <- c(...)

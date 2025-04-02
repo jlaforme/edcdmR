@@ -18,4 +18,5 @@ Imports:
     stringr,
     progress,
     tidyr,
-    stringr
+    stringr,
+    purrr
