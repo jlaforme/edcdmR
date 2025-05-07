@@ -113,12 +113,12 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
     mutate(
       section_header = ifelse(
         !is.na(section_header) & grepl("<.*?>", section_header),
-        map_chr(section_header, ~ tryCatch(xml_text(read_html(.x)), error = function(e) NA)),
+        purrr::map_chr(section_header, ~ tryCatch(xml_text(read_html(.x)), error = function(e) NA)),
         section_header
       ),
       field_label = ifelse(
         !is.na(field_label) & grepl("<.*?>", field_label),
-        map_chr(field_label, ~ tryCatch(xml_text(read_html(.x)), error = function(e) NA)),
+        purrr::map_chr(field_label, ~ tryCatch(xml_text(read_html(.x)), error = function(e) NA)),
         field_label
       )
     ) %>%
