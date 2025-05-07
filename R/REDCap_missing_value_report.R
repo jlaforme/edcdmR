@@ -14,7 +14,7 @@
 #'
 #' @examples
 
-REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, event_form = NULL, InstrumentSkip = NULL, event_description = NULL, id_variable = "record_id", start_of_tx_variable) {
+REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, event_form = NULL, InstrumentSkip = NULL, event_description = NULL, id_variable = "record_id", start_of_tx_variable = NULL) {
 
   library(dplyr)
   library(xml2)
@@ -65,8 +65,18 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
 
 
   # Declare variables and objects
-  t0_variable <- start_of_tx_variable  # define which variable (date) refers as the start of the study data collection
+  if (is.null(start_of_tx_variable)) {
+    t0_variable = Sys.Date() - 1
+  } else {
+    t0_variable <- start_of_tx_variable # define which variable (date) refers as the start of the study data collection
+  }
+
   id_variable <- id_variable # define which variable contains the participant's ID
+
+  if (!t0_variable %in% names(data) && is.Date(t0_variable)) {
+    data$t0_variable <- t0_variable
+    t0_variable = "t0_variable"
+  }
 
 
 
@@ -432,7 +442,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   table_missing$redcap_event_name <- matrix_missing[idx_missing$row, which(names(matrix_missing) == "redcap_event_name")]
   table_missing$redcap_repeat_instance <- matrix_missing[idx_missing$row, which(names(matrix_missing) == "redcap_repeat_instance")]
   # If there is no redcap_repeat_instance in data, create an empty one
-  if ("redcap_repeat_instance" %in% colnames(table_missing) && (all(is.na(table_missing$redcap_repeat_instance))|all(table_missing$redcap_repeat_instance == ""))) {
+  if ("redcap_repeat_instance" %in% colnames(table_missing) && (all(is.na(table_missing$redcap_repeat_instance))|all(table_missing$redcap_repeat_instance == "")) && nrow(table_missing) > 0) {
     table_missing$redcap_repeat_instance <- NA
   }
   table_missing$var_name <- names(matrix_missing)[idx_missing$col]
@@ -456,7 +466,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   table_complete$redcap_event_name <- matrix_missing[idx_complete$row, which(names(matrix_missing) == "redcap_event_name")]
   table_complete$redcap_repeat_instance <- matrix_missing[idx_complete$row, which(names(matrix_missing) == "redcap_repeat_instance")]
   # If there is no redcap_repeat_instance in data, create an empty one
-  if ("redcap_repeat_instance" %in% colnames(table_complete) && (all(is.na(table_complete$redcap_repeat_instance))|all(table_complete$redcap_repeat_instance == ""))) {
+  if ("redcap_repeat_instance" %in% colnames(table_complete) && (all(is.na(table_complete$redcap_repeat_instance))|all(table_complete$redcap_repeat_instance == "")) && nrow(table_complete) > 0) {
     table_complete$redcap_repeat_instance <- NA
   }
   table_complete$var_name <- names(matrix_missing)[idx_complete$col]
@@ -493,7 +503,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   table_excluded_form$redcap_event_name <- matrix_missing[idx_excluded_form$row, which(names(matrix_missing) == "redcap_event_name")]
   table_excluded_form$redcap_repeat_instance <- matrix_missing[idx_excluded_form$row, which(names(matrix_missing) == "redcap_repeat_instance")]
   # If there is no redcap_repeat_instance in data, create an empty one
-  if ("redcap_repeat_instance" %in% colnames(table_excluded_form) && (all(is.na(table_excluded_form$redcap_repeat_instance))|all(table_excluded_form$redcap_repeat_instance == ""))) {
+  if ("redcap_repeat_instance" %in% colnames(table_excluded_form) && (all(is.na(table_excluded_form$redcap_repeat_instance))|all(table_excluded_form$redcap_repeat_instance == "")) && nrow(table_excluded_form) > 0) {
     table_excluded_form$redcap_repeat_instance <- NA
   }
   table_excluded_form$var_name <- names(matrix_missing)[idx_excluded_form$col]
@@ -565,10 +575,28 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
     relocate(start_of_tx, .after = !!sym(id_variable)) %>%
     relocate(section_header, .after = var_name) %>%
     relocate(field_label, .after = section_header) %>%
-    relocate(required_field, .after = field_label) %>%
-    mutate(required_field = ifelse(var_name == "All", "y", required_field))
+    relocate(required_field, .after = field_label)
+
+  forms_with_required <- dictionary %>%
+    filter(required_field == "y") %>%
+    distinct(form_name) %>%
+    pull(form_name)
+
+  table_missing <- table_missing %>%
+    mutate(required_field = if_else(
+      var_name == "All" & form_name %in% forms_with_required,
+      "y",
+      required_field
+    ))
+
+
 
   # Clean the output if needed
+  if (is.null(start_of_tx_variable)) {
+    table_missing <- table_missing %>%
+      select(-overdue_days)
+  }
+
   if (all(is.na(table_missing$redcap_repeat_instance))) {
     table_missing <- table_missing %>%
       select(-redcap_repeat_instance)

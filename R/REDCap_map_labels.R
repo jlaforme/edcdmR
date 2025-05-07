@@ -70,14 +70,14 @@ REDCap_map_labels <- function(data, dictionary, variables = "All") {
 
 
   data_labels_conv <- data %>%
-    mutate(across(all_of(valid_vars),
-                  ~ {
-                    # Check the column class and convert to character if logical
-                    if (is.logical(.)) {
-                      . <- as.character(.)
-                    }
-                    eval(parse(text = paste0("recode(", dictionary$var_name[dictionary$var_name == cur_column()], ", ", dictionary$coding[dictionary$var_name == cur_column()], ", .default = NA_character_)")))
-                  }))
+    mutate(across(all_of(valid_vars), ~ {
+      var <- cur_column()
+      codes <- dictionary$coding[dictionary$var_name == var]
+      mapping <- eval(parse(text = paste0("c(", codes, ")")))
+      recoded <- mapping[as.character(.)]
+      recoded[is.na(recoded)] <- NA_character_
+      recoded
+    }))
 
   return(data_labels_conv)
 }
