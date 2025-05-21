@@ -21,7 +21,9 @@ REDCap_logic_parser <- function(..., data = NULL, dictionary = NULL, logic, colu
   library(stringr)
   library(lubridate)
 
+
   project <- c(...)
+
 
   # Checks
   if(!is.null(project)){
@@ -89,17 +91,32 @@ REDCap_logic_parser <- function(..., data = NULL, dictionary = NULL, logic, colu
 
 
   # Clean the dd
-  dictionary <- dictionary %>%
-    mutate(across(where(is.character), ~ na_if(., ""))) %>%
-    rename_with(~ ifelse(str_detect(., regex("var|field name|field_name", ignore_case = TRUE)), "var_name", .)) %>%
-    rename_with(~ ifelse(str_detect(., regex("form", ignore_case = TRUE)), "form_name", .)) %>%
-    rename_with(~ ifelse(str_detect(., regex("branching|logic", ignore_case = TRUE)), "branching_logic", .)) %>%
-    rename_with(~ ifelse(str_detect(., regex("field type", ignore_case = TRUE)), "field_type", .)) %>%
-    rename_with(~ ifelse(str_detect(., regex("header|section", ignore_case = TRUE)), "section_header", .)) %>%
-    rename_with(~ ifelse(str_detect(., regex("field label", ignore_case = TRUE)), "field_label", .)) %>%
-    rename_with(~ ifelse(str_detect(., regex("required", ignore_case = TRUE)), "required_field", .))
+  if(!is.null(dictionary)) {
+    dictionary <- dictionary %>%
+      mutate(across(where(is.character), ~ na_if(., ""))) %>%
+      rename_with(~ ifelse(str_detect(., regex("var|field name|field_name", ignore_case = TRUE)), "var_name", .)) %>%
+      rename_with(~ ifelse(str_detect(., regex("form", ignore_case = TRUE)), "form_name", .)) %>%
+      rename_with(~ ifelse(str_detect(., regex("branching|logic", ignore_case = TRUE)), "branching_logic", .)) %>%
+      rename_with(~ ifelse(str_detect(., regex("field type", ignore_case = TRUE)), "field_type", .)) %>%
+      rename_with(~ ifelse(str_detect(., regex("header|section", ignore_case = TRUE)), "section_header", .)) %>%
+      rename_with(~ ifelse(str_detect(., regex("field label", ignore_case = TRUE)), "field_label", .)) %>%
+      rename_with(~ ifelse(str_detect(., regex("required", ignore_case = TRUE)), "required_field", .))
+  }
 
-  # Clean the logic if not null
+  # Display warning message if no dictionary and/or data was provided
+  if(is.null(dictionary) && is.null(data)) {
+    warning("No dictionary and data provided. REDCap branching logic will be parsed, but complex logic may lead to errors or misinterpretation.")
+  }
+
+  if(is.null(dictionary) && !is.null(data)) {
+    warning("No dictionary provided. REDCap branching logic will be parsed, but complex logic may lead to errors or misinterpretation.")
+  }
+
+  if(!is.null(dictionary) && is.null(data)) {
+    warning("No data provided. REDCap branching logic will be parsed, but complex logic may lead to errors or misinterpretation.")
+  }
+
+  # Clean the logic
   logic <- logic %>%
     mutate(across(all_of(column_name), ~ ifelse(. == "", NA, .)))
 
@@ -310,7 +327,7 @@ REDCap_logic_parser <- function(..., data = NULL, dictionary = NULL, logic, colu
 
       # Handle `stdev()`
       if (str_detect(cell, "stdev\\(")) {
-       cell <- gsub("stdv", "sd", cell)
+        cell <- gsub("stdv", "sd", cell)
       }
 
 
