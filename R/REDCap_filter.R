@@ -14,7 +14,7 @@
 #' @examples REDCap_filter(data = REDCap_data, dictionary = REDCap_dd, id_variable = "record_id")
 #' @examples REDCap_filter(data = REDCap_data, dictionary = REDCap_dd, id_variable = "record_id", forms = c("form1", "form2", "..."), variables = c("var1", "var2", "..."))
 
-REDCap_filter <- function(data, dictionary, id_variable, forms = NULL, variables = NULL) {
+REDCap_filter <- function(data, dictionary, id_variable, forms = NULL, variables = NULL, remove_na = FALSE) {
   library(dplyr)
   library(xml2)
   library(tidyr)
@@ -44,7 +44,7 @@ REDCap_filter <- function(data, dictionary, id_variable, forms = NULL, variables
     base_var <- strsplit(x, "___")[[1]][1]
     base_var %in% dictionary$var_name | grepl("_complete$", x)
   })]
-
+  metadata_columns <- metadata_columns[grepl("redcap", metadata_columns)]
 
   # Define the id_variable
   id_variable <- dictionary$var_name[1]
@@ -52,6 +52,10 @@ REDCap_filter <- function(data, dictionary, id_variable, forms = NULL, variables
   # Fill the forms if empty
   if (is.null(forms)) {
     forms <- c(NA, unique(dictionary$form_name))
+  }
+
+  if (any(!forms %in% data$redcap_repeat_instrument)) {
+    forms <- c(forms, "NA", NA)
   }
 
   if (is.null(variables) || length(variables) == 0 || any(variables %in% c("All", "all"))) {
@@ -66,6 +70,11 @@ REDCap_filter <- function(data, dictionary, id_variable, forms = NULL, variables
     filter(redcap_repeat_instrument %in% forms) %>%
     filter(!if_all(-c({{id_variable}}, all_of(metadata_columns)), is.na)) %>%
     select({{id_variable}}, all_of(metadata_columns), any_of(variables))
+
+  if (isTRUE(remove_na)){
+    data_filtered <- data_filtered %>%
+      filter(rowSums(!is.na(select(., -all_of(metadata_columns)))) > 0)
+  }
 
   return(data_filtered)
 }
