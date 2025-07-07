@@ -7,6 +7,7 @@
 #' @param id_variable Name of the identifier variable
 #' @param forms Forms to include; defaults to all
 #' @param variables Variables to include; defaults to all
+#' @param remove_na Optional argument to remove rows where all data is missing/NA
 #'
 #' @returns A filtered dataframe
 #' @export
