@@ -12,7 +12,7 @@ REDCap_missing_value_report(
   InstrumentSkip = NULL,
   event_description = NULL,
   id_variable = "record_id",
-  start_of_tx_variable
+  start_of_tx_variable = NULL
 )
 }
 \arguments{
@@ -30,7 +30,7 @@ REDCap_missing_value_report(
 
 \item{id_variable}{Character vector of lenght 1 containing the name of the ID variable (identifier).}
 
-\item{start_of_tx_variable}{Character vector of lenght 1 containing the name of the variable containing the start of treatment date (identifier).}
+\item{start_of_tx_variable}{Character vector of lenght 1 containing the name of the variable containing the start of treatment date.}
 }
 \description{
 This function generates a missing variables report

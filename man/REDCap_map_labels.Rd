@@ -4,12 +4,12 @@
 \alias{REDCap_map_labels}
 \title{Map metadata labels to data values}
 \usage{
-REDCap_map_labels(data, data_dictionary, variables = "All")
+REDCap_map_labels(data, dictionary, variables = "All")
 }
 \arguments{
 \item{data}{The REDCap data to map}
 
-\item{data_dictionary}{The REDCap data dictionary}
+\item{dictionary}{The REDCap data dictionary}
 
 \item{variables}{Variable(s) to map; defaults to all}
 }

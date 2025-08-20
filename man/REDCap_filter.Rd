@@ -6,22 +6,25 @@
 \usage{
 REDCap_filter(
   data,
-  data_dictionary,
+  dictionary,
   id_variable,
   forms = NULL,
-  variables = NULL
+  variables = NULL,
+  remove_na = FALSE
 )
 }
 \arguments{
 \item{data}{Dataset to filter}
 
-\item{data_dictionary}{Data dictionary}
+\item{dictionary}{Data dictionary}
 
 \item{id_variable}{Name of the identifier variable}
 
 \item{forms}{Forms to include; defaults to all}
 
 \item{variables}{Variables to include; defaults to all}
+
+\item{remove_na}{Optional argument to remove rows where all data is missing/NA}
 }
 \value{
 A filtered dataframe
@@ -30,6 +33,6 @@ A filtered dataframe
 Reruens a filtered dataset based on forms and variables arguments.
 }
 \examples{
-REDCap_filter(data = REDCap_data, data_dictionary = REDCap_dd, id_variable = "record_id")
-REDCap_filter(data = REDCap_data, data_dictionary = REDCap_dd, id_variable = "record_id", forms = c("form1", "form2", "..."), variables = c("var1", "var2", "..."))
+REDCap_filter(data = REDCap_data, dictionary = REDCap_dd, id_variable = "record_id")
+REDCap_filter(data = REDCap_data, dictionary = REDCap_dd, id_variable = "record_id", forms = c("form1", "form2", "..."), variables = c("var1", "var2", "..."))
 }
