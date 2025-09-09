@@ -74,7 +74,5 @@ REDCap_map_names <- function(data, dictionary, variables = "All"){
   # Assign
   names(data) <- new_names
 
-
-
-
+  return(data)
 }
