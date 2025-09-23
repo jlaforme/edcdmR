@@ -10,7 +10,7 @@
 #'
 #' @examples REDCap_map_names(data = REDCap_data, dictionary = REDCap_dd, variables = "All")
 
-REDCap_map_names <- function(data, dictionary, variables = "All"){
+REDCap_map_names <- function(data, dictionary, variables = "All", include_header = TRUE){
   library(dplyr)
   library(tidyr)
 
@@ -29,6 +29,7 @@ REDCap_map_names <- function(data, dictionary, variables = "All"){
       TRUE ~ .
     )) %>%
 
+    filter(var_name %in% names(data)) %>%
     filter(field_type != "descriptive") %>%
 
     mutate(section_header = ifelse(str_trim(section_header) == "", NA, section_header)) %>%
@@ -54,7 +55,7 @@ REDCap_map_names <- function(data, dictionary, variables = "All"){
   dictionary <- dictionary %>%
     select(var_name, section_header, field_label) %>%
     mutate(section_header = str_remove(section_header, ":$")) %>%
-    mutate(var_full_name = ifelse(is.na(section_header), field_label, paste0(section_header, ": ", field_label))) %>%
+    mutate(var_full_name = ifelse(is.na(section_header) | include_header == FALSE, field_label, paste0(section_header, ": ", field_label))) %>%
     select(var_name, var_full_name)
 
 
