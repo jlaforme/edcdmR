@@ -19,3 +19,6 @@ A dataset with mapped labels
 \description{
 Map variable label to variable name
 }
+\examples{
+REDCap_map_names(data = REDCap_data, dictionary = REDCap_dd, variables = "All")
+}

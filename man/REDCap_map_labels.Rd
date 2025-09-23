@@ -19,3 +19,6 @@ A dataset with mapped values
 \description{
 Allows to map caterogical values of a REDCap dataset to their respective data dictionary labels. Only applicable to radio and dropdown variables.
 }
+\examples{
+REDCap_map_names(data = REDCap_data, dictionary = REDCap_dd, variables = "All")
+}

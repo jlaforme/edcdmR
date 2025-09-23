@@ -8,7 +8,7 @@
 #' @returns A dataset with mapped labels
 #' @export
 #'
-#' @examples
+#' @examples REDCap_map_names(data = REDCap_data, dictionary = REDCap_dd, variables = "All")
 
 REDCap_map_names <- function(data, dictionary, variables = "All"){
   library(dplyr)
