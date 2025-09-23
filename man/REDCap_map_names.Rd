@@ -4,7 +4,7 @@
 \alias{REDCap_map_names}
 \title{Map variable label to variable name}
 \usage{
-REDCap_map_names(data, dictionary, variables = "All")
+REDCap_map_names(data, dictionary, variables = "All", include_header = TRUE)
 }
 \arguments{
 \item{data}{The REDCap data to map}
@@ -12,6 +12,8 @@ REDCap_map_names(data, dictionary, variables = "All")
 \item{dictionary}{The REDCap data dictionary}
 
 \item{variables}{Variable(s) to map; defaults to all}
+
+\item{include_header}{Wether you want to include the question/label header in the variable name}
 }
 \value{
 A dataset with mapped labels
