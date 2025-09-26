@@ -4,6 +4,7 @@
 #' @param data The REDCap data to map
 #' @param dictionary The REDCap data dictionary
 #' @param variables Variable(s) to map; defaults to all
+#' @param include_header Wether you want to include the question/label header in the variable name
 #'
 #' @returns A dataset with mapped labels
 #' @export
