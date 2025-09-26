@@ -189,7 +189,8 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
     mutate(across(where(is.character), ~na_if(., ""))) %>%
     rename_with(~ ifelse(str_detect(., regex("event", ignore_case = TRUE)), "event_name", .)) %>%
     rename_with(~ ifelse(str_detect(., regex("form", ignore_case = TRUE)), "form_name", .)) %>%
-    rename_with(~ ifelse(str_detect(., regex("control|condition", ignore_case = TRUE)), "control_condition", .))
+    rename_with(~ ifelse(str_detect(., regex("control|condition", ignore_case = TRUE)), "control_condition", .)) %>%
+    mutate(control_condition = gsub("\n", "", control_condition))
 
   # event_form
   event_form <- event_form %>%
