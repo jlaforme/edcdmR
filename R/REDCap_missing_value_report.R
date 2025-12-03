@@ -1,20 +1,30 @@
 #' This function generates a missing variables report
 #'
-#' @param ... List containing the REDCap data, dictionary and event form mapping (if required). This should be the output of the `REDCap_import` function.
-#' @param data Data frame containing the data read from REDCap. If a list (...) is specified, this argument is not required.
-#' @param dictionary Data frame containing the REDCap dictionary. If a list (...) is specified, this argument is not required.
-#' @param event_form Data frame containing the mapping of each form with each event. If a list (...) is specified, this argument is not required.
-#' @param InstrumentSkip Data frame containing the mapping of each form with each event. If a list (...) is specified, this argument is not required.
-#' @param event_description Data frame containing the description of each event. If a list (...) is specified, this argument is not required.
-#' @param id_variable Character vector of lenght 1 containing the name of the ID variable (identifier).
-#' @param start_of_tx_variable Character vector of lenght 1 containing the name of the variable containing the start of treatment date.
+#' @param ... List containing the REDCap data, dictionary and event form mapping (if required).
+#'   This should be the output of the `REDCap_import` function.
+#' @param data Data frame containing the data read from REDCap.
+#' @param dictionary Data frame containing the REDCap dictionary.
+#' @param event_form Data frame mapping each form to each event.
+#' @param InstrumentSkip Data frame specifying forms to skip under certain conditions.
+#' @param event_description Data frame describing each event.
+#' @param id_variable Character string naming the participant ID variable.
+#' @param start_of_tx_variable Character string naming the variable containing the start of treatment date.
+#' @param include_complete_table Logical, whether to return the complete table.
 #'
-#' @returns
+#' @return A data frame or a list of data frames.
+#'
+#' @importFrom dplyr mutate select filter bind_rows rename rename_with across group_by summarise
+#'   ungroup left_join relocate distinct pull everything arrange
+#' @importFrom tidyr fill pivot_longer pivot_wider
+#' @importFrom stringr str_detect str_remove str_remove_all str_split str_trim str_squish
+#' @importFrom purrr map_chr map_dfr
+#' @importFrom xml2 read_html xml_text
+#' @importFrom progress progress_bar
+#' @importFrom tibble as_tibble
+#'
 #' @export
-#'
-#' @examples
 
-REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, event_form = NULL, InstrumentSkip = NULL, event_description = NULL, id_variable = "record_id", start_of_tx_variable = NULL) {
+REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, event_form = NULL, InstrumentSkip = NULL, event_description = NULL, id_variable = "record_id", start_of_tx_variable = NULL, include_complete_table = FALSE) {
 
   library(dplyr)
   library(xml2)
@@ -22,6 +32,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   library(tidyr)
   library(stringr)
   library(purrr)
+
 
   # Assign project
   project <- c(...)
@@ -226,12 +237,12 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
           if (is.logical(eval_result)) {
             all(eval_result, na.rm = TRUE)  # Ensure the result is logical and NA values are removed
           } else {
-            message("Invalid logical expression in row ", row_index)
+            base::message("Invalid logical expression in row ", row_index)
             FALSE
           }
 
         }, error = function(e) {
-          message("Error in branching logic (row ", row_index, "): ", cell, " - ", e$message)
+          base::message("Error in branching logic (row ", row_index, "): ", cell, " - ", e$message)
           FALSE  # If an error occurs, return FALSE
         })
 
@@ -419,7 +430,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
     }
   }
   rm(pb, i, ii, form_logic, logic, is_repeated, variable_name, validation_results)
-
+  matrix_missing_backup <- matrix_missing
 
   # Set back to the original data names
   names(matrix_missing) <- names(data)
@@ -473,6 +484,16 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   table_complete$form_name <- ifelse(variable_exists_complete, dictionary$form_name[match(variable_names_complete, dictionary$var_name)], NA)
 
   rm(idx_complete, variable_names_complete, variable_exists_complete)
+
+
+  # Create complete table
+  if (isTRUE(include_complete_table)) {
+    complete_table <- table_complete %>%
+      mutate(complete = 1) %>%
+      bind_rows(table_missing %>% mutate(complete = 0))
+  }
+
+
 
   # Clean table_complete
   table_complete <- table_complete %>%
@@ -601,6 +622,11 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
     table_missing <- table_missing %>%
       select(-redcap_repeat_instance)
   }
+
+  if (isTRUE(include_complete_table)) {
+    table_missing = list(table_missing = table_missing, complete_table = complete_table)
+  }
+
 
   return(table_missing)
 }

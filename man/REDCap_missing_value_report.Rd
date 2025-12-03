@@ -12,25 +12,32 @@ REDCap_missing_value_report(
   InstrumentSkip = NULL,
   event_description = NULL,
   id_variable = "record_id",
-  start_of_tx_variable = NULL
+  start_of_tx_variable = NULL,
+  include_complete_table = FALSE
 )
 }
 \arguments{
-\item{...}{List containing the REDCap data, dictionary and event form mapping (if required). This should be the output of the \code{REDCap_import} function.}
+\item{...}{List containing the REDCap data, dictionary and event form mapping (if required).
+This should be the output of the \code{REDCap_import} function.}
 
-\item{data}{Data frame containing the data read from REDCap. If a list (...) is specified, this argument is not required.}
+\item{data}{Data frame containing the data read from REDCap.}
 
-\item{dictionary}{Data frame containing the REDCap dictionary. If a list (...) is specified, this argument is not required.}
+\item{dictionary}{Data frame containing the REDCap dictionary.}
 
-\item{event_form}{Data frame containing the mapping of each form with each event. If a list (...) is specified, this argument is not required.}
+\item{event_form}{Data frame mapping each form to each event.}
 
-\item{InstrumentSkip}{Data frame containing the mapping of each form with each event. If a list (...) is specified, this argument is not required.}
+\item{InstrumentSkip}{Data frame specifying forms to skip under certain conditions.}
 
-\item{event_description}{Data frame containing the description of each event. If a list (...) is specified, this argument is not required.}
+\item{event_description}{Data frame describing each event.}
 
-\item{id_variable}{Character vector of lenght 1 containing the name of the ID variable (identifier).}
+\item{id_variable}{Character string naming the participant ID variable.}
 
-\item{start_of_tx_variable}{Character vector of lenght 1 containing the name of the variable containing the start of treatment date.}
+\item{start_of_tx_variable}{Character string naming the variable containing the start of treatment date.}
+
+\item{include_complete_table}{Logical, whether to return the complete table.}
+}
+\value{
+A data frame or a list of data frames.
 }
 \description{
 This function generates a missing variables report
