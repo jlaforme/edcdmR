@@ -24,6 +24,7 @@
 #'
 #' @export
 
+
 REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, event_form = NULL, InstrumentSkip = NULL, event_description = NULL, id_variable = "record_id", start_of_tx_variable = NULL, include_complete_table = FALSE) {
 
   library(dplyr)
@@ -33,7 +34,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   library(stringr)
   library(purrr)
 
-
+  dictionary <- data_dictionary
   # Assign project
   project <- c(...)
 
@@ -431,7 +432,7 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   }
   rm(pb, i, ii, form_logic, logic, is_repeated, variable_name, validation_results)
   matrix_missing_backup <- matrix_missing
-
+  matrix_missing <- matrix_missing_backup
   # Set back to the original data names
   names(matrix_missing) <- names(data)
   matrix_missing[, 1:(start_col-1)] <- data[, 1:(start_col-1)]
@@ -486,16 +487,11 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
   rm(idx_complete, variable_names_complete, variable_exists_complete)
 
 
-  # Create complete table
-  if (isTRUE(include_complete_table)) {
-    complete_table <- table_complete %>%
-      mutate(complete = 1) %>%
-      bind_rows(table_missing %>% mutate(complete = 0))
-  }
 
 
 
   # Clean table_complete
+  table_complete1 <- table_complete
   table_complete <- table_complete %>%
     mutate(var_name = str_remove(var_name, "___.*")) %>%
     unique() %>%
@@ -611,6 +607,13 @@ REDCap_missing_value_report <- function(..., data = NULL, dictionary = NULL, eve
     ))
 
 
+
+  # Create complete table
+  if (isTRUE(include_complete_table)) {
+    complete_table <- table_complete1 %>%
+      mutate(complete = 1) %>%
+      bind_rows(table_missing %>% mutate(complete = 0))
+  }
 
   # Clean the output if needed
   if (is.null(start_of_tx_variable)) {
