@@ -69,14 +69,39 @@ REDCap_map_labels <- function(data, dictionary, variables = "All") {
   valid_vars <- intersect(dictionary$var_name, names(data))
 
 
+  parse_coding <- function(x) {
+    # Replace doubled quotes
+    x <- gsub('""', '"', x, fixed = TRUE)
+    x <- trimws(x)
+
+    # Extract `code` = "label" pairs
+    m <- stringr::str_match_all(
+      x,
+      "`([^`]+)`\\s*=\\s*\"([^\"]*)\""
+    )[[1]]
+
+    if (nrow(m) == 0) return(NULL)
+
+    vals <- m[, 3]
+    names(vals) <- m[, 2]
+    vals
+  }
+
   data_labels_conv <- data %>%
-    mutate(across(all_of(valid_vars), ~ {
+    mutate(across(all_of(valid_vars), ~{
       var <- cur_column()
       codes <- dictionary$coding[dictionary$var_name == var]
-      mapping <- eval(parse(text = paste0("c(", codes, ")")))
-      recoded <- mapping[as.character(.)]
-      recoded[is.na(recoded)] <- NA_character_
-      recoded
+
+      if (length(codes) == 0 || is.na(codes[1]) || trimws(codes[1]) == "") {
+        return(NA_character_)
+      }
+
+      mapping <- parse_coding(codes[1])
+      if (is.null(mapping)) return(NA_character_)
+
+      out <- unname(mapping[as.character(.)])
+      out[is.na(out)] <- NA_character_
+      out
     }))
 
   return(data_labels_conv)
